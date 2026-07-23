@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Surf-Ready Tracker</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Surf Tracker">
+<meta name="theme-color" content="#2F6F6B">
+<style>
+  html, body { margin: 0; padding: 0; background: #F3EFE4; }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+<style>
+  #app-root {
+    --bg: #F3EFE4;
+    --card: #FBF8EF;
+    --ink: #1E2B2A;
+    --ink-soft: #5B6664;
+    --teal: #2F6F6B;
+    --teal-deep: #1E4C49;
+    --gold: #C99A3E;
+    --clay: #B85C4A;
+    --line: #DCD3BE;
+    --line-soft: #E9E2D1;
+
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    box-sizing: border-box;
+    position: relative;
+  }
+  #app-root * { box-sizing: border-box; }
+
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 6px;
+  }
+  .top-row { display: flex; justify-content: space-between; align-items: flex-start; }
+  h1 {
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-weight: 400;
+    font-size: 28px;
+    margin: 0 0 2px;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin: 0 0 22px;
+  }
+
+  .guide-btn {
+    background: transparent;
+    color: var(--teal-deep);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .guide-btn:hover { background: var(--line-soft); }
+
+  /* Tide progress bar - signature element */
+  .tide-wrap { margin-bottom: 26px; }
+  .tide-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .tide-svg { width: 100%; height: 28px; display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 20px;
+    margin-bottom: 18px;
+  }
+  .session-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .session-tag {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--teal-deep);
+    background: rgba(47,111,107,0.1);
+    padding: 3px 8px;
+    border-radius: 5px;
+  }
+  .session-band {
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  h2 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 21px;
+    margin: 6px 0 4px;
+  }
+  .mvd-banner {
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--gold);
+    letter-spacing: 0.03em;
+    margin: 0 0 14px;
+  }
+
+  .exercise {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .exercise:first-of-type { border-top: none; }
+  .exercise input[type="checkbox"] {
+    margin-top: 3px;
+    width: 17px;
+    height: 17px;
+    accent-color: var(--teal);
+    flex-shrink: 0;
+  }
+  .exercise-body { flex: 1; min-width: 0; }
+  .exercise-name-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    cursor: pointer;
+  }
+  .exercise-name { font-weight: 600; font-size: 15px; }
+  .exercise-name:hover { text-decoration: underline; text-decoration-style: dotted; }
+  .exercise-sets {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--teal-deep);
+  }
+  .mvd-badge {
+    font-size: 10px;
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .info-dot {
+    font-size: 11px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    width: 15px;
+    height: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .exercise-cue {
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+  .exercise-full-desc {
+    background: var(--line-soft);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .exercise.checked .exercise-name { text-decoration: line-through; color: var(--ink-soft); }
+
+  .mvd-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 16px 0 4px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .mvd-toggle input { accent-color: var(--gold); }
+
+  .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 11px 16px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.88; }
+  button:active { opacity: 0.7; }
+  .btn-primary { background: var(--teal); color: white; flex: 1; min-width: 140px; }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
+  .btn-text { background: none; color: var(--teal-deep); padding: 6px 4px; font-weight: 500; text-decoration: underline; }
+
+  .history {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .history-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line-soft);
+    color: var(--ink-soft);
+  }
+  .history-row:first-child { border-top: none; }
+  .history-tag { color: var(--ink); font-weight: 600; }
+  .history-mode { font-family: ui-monospace, monospace; font-size: 11px; }
+  .mode-full { color: var(--teal-deep); }
+  .mode-mvd { color: var(--gold); }
+
+  .empty-history { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+
+  .done-state {
+    text-align: center;
+    padding: 30px 10px;
+  }
+  .done-state h2 { margin-bottom: 8px; }
+
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .settings-panel {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 13px;
+  }
+  select {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: white;
+  }
+
+  .loading { color: var(--ink-soft); font-size: 14px; padding: 20px 0; }
+
+  /* Exercise guide modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 43, 42, 0.45);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .modal-box {
+    background: var(--bg);
+    border-radius: 12px;
+    max-width: 540px;
+    width: 100%;
+    padding: 24px 22px 30px;
+    border: 1px solid var(--line);
+  }
+  .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--ink-soft);
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  .guide-search {
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    font-size: 14px;
+    font-family: inherit;
+    margin: 14px 0 18px;
+  }
+  .guide-category {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 20px 0 8px;
+  }
+  .guide-category:first-of-type { margin-top: 0; }
+  .guide-item { padding: 10px 0; border-top: 1px solid var(--line-soft); }
+  .guide-item:first-of-type { border-top: none; }
+  .guide-item-name { font-weight: 600; font-size: 14.5px; margin-bottom: 3px; }
+  .guide-item-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+  .guide-empty { font-size: 13px; color: var(--ink-soft); font-style: italic; padding: 10px 0; }
+</style>
+
+<script>
+(function() {
+  // ---------- Exercise library: short cue (shown inline) + full description (guide/expand) ----------
+  const EX = {
+    squat:      { name: "Band Squat", cat: "Strength", cue: "Stand on band, handles at shoulders, squat to comfortable depth.",
+      full: "Stand in the middle of the band with feet shoulder-width apart, one handle in each hand at shoulder height. Squat down as if sitting into a chair, keeping your weight in your heels, then stand back up." },
+    lunge:      { name: "Reverse Lunge", cat: "Strength", cue: "Band under front foot, step back, handles at shoulders.",
+      full: "Band under your front foot, handles at your shoulders. Step backward with one leg, lowering your back knee toward the floor, then step back to standing. Finish all reps on one side before switching." },
+    row:        { name: "Standing Row", cat: "Strength", cue: "Anchor low, step back for tension, pull handles to ribs.",
+      full: "Anchor the band low on the door, step back until there's tension, handles in both hands. Pull your elbows straight back, squeezing your shoulder blades together, then return slowly." },
+    bentRow:    { name: "Bent-Over Row", cat: "Strength", cue: "Anchor low, hinge at hips, pull handles to waist.",
+      full: "Same setup as the Standing Row, but hinge forward at the hips about 45 degrees before pulling. This shifts more work into your upper back." },
+    chestPress: { name: "Standing Chest Press", cat: "Strength", cue: "Anchor behind you at chest height, press handles forward.",
+      full: "Anchor the band behind you at chest height. Facing away from the anchor, press both handles forward until your arms are extended, then return slowly." },
+    ohPress:    { name: "Standing Overhead Press", cat: "Strength", cue: "Stand on band, press handles overhead.",
+      full: "Stand on the band with feet shoulder-width apart, handles starting at shoulder height. Press both handles straight overhead, then lower with control." },
+    pulldown:   { name: "Straight-Arm Pulldown", cat: "Strength", cue: "Anchor high, pull down and back like a paddle stroke.",
+      full: "Anchor the band high on the door. With arms straight (a slight bend at the elbow is fine), pull the handles down and back toward your hips in an arc. This mimics a paddling stroke — treat it as practice for the motion itself, not just a strength exercise." },
+    facePull:   { name: "Face Pulls", cat: "Strength", cue: "Anchor at chest height, pull to face, elbows high.",
+      full: "Anchor the band at chest height. Pull both handles toward your face, leading with your elbows so they finish higher than your hands. Good for shoulder health, which matters a lot once you're paddling regularly." },
+    bridge:     { name: "Glute Bridge", cat: "Strength", cue: "Band around thighs, lie on back, drive hips up.",
+      full: "Lie on your back, knees bent, band looped around your thighs just above the knee. Drive your hips up toward the ceiling, squeezing your glutes at the top, then lower." },
+    slBridge:   { name: "Single-Leg Glute Bridge", cat: "Strength", cue: "Same as bridge, one leg extended straight.",
+      full: "Same setup as the Glute Bridge, but extend one leg straight out and press through the heel of the other. Switch sides." },
+    plank:      { name: "Plank", cat: "Strength", cue: "Forearms down, straight line from head to heels.",
+      full: "Forearms on the floor, elbows under shoulders, body in a straight line from head to heels. Don't let your hips sag or pike up." },
+    sidePlank:  { name: "Side Plank", cat: "Strength", cue: "Stack feet, prop on one forearm, hips lifted.",
+      full: "Stack your feet, prop yourself up on one forearm, and lift your hips so your body forms a straight line. Switch sides." },
+    birdDog:    { name: "Bird Dog", cat: "Strength", cue: "Hands and knees, extend opposite arm and leg.",
+      full: "On hands and knees, extend one arm straight forward and the opposite leg straight back at the same time, keeping your hips level. Return and switch sides." },
+    pallof:     { name: "Pallof Press", cat: "Strength", cue: "Anchor at chest to your side, press out, resist rotating.",
+      full: "Anchor the band at chest height to your side. Holding one handle at your chest with both hands, press it straight out in front of you and hold — the band will try to rotate your torso toward the anchor, and your job is to resist that pull." },
+    woodChop:   { name: "Wood Chops", cat: "Strength", cue: "Anchor high to one side, pull down across body.",
+      full: "Anchor the band high to one side. Pull the handle down and across your body in a diagonal chopping motion, rotating through your torso, not just your arms." },
+    catCow:     { name: "Cat-Cow", cat: "Mobility", cue: "Hands and knees, arch and round your spine slowly.",
+      full: "On hands and knees, alternate between arching your spine up toward the ceiling (cat) and dropping your belly while lifting your chest (cow). Slow and continuous." },
+    hip9090:    { name: "90/90 Hip Switches", cat: "Mobility", cue: "Seated, knees bent 90°, rotate side to side.",
+      full: "Sit on the floor with both knees bent to 90 degrees, one in front of you and one out to the side. Rotate both knees to the opposite side without using your hands, then switch back." },
+    thoracic:   { name: "Thoracic Rotations", cat: "Mobility", cue: "Hands behind head, rotate upper back side to side.",
+      full: "On hands and knees or standing, hands behind your head, rotate your upper back to bring one elbow up toward the ceiling, then the other." },
+    wgs:        { name: "World's Greatest Stretch", cat: "Mobility", cue: "Lunge, rotate toward front knee, reach up.",
+      full: "Step into a long lunge, plant both hands on the floor inside your front foot, rotate your torso and reach that same-side arm toward the ceiling, then reset." },
+    downCobra:  { name: "Downward Dog → Cobra Flow", cat: "Mobility", cue: "Flow between inverted V and a low cobra stretch.",
+      full: "From a push-up position, push your hips up and back into an inverted V (downward dog), then lower and arch into a low cobra stretch, chest lifted. This transition is close to the motion of a surf pop-up — pay attention to how your hips and shoulders move together." },
+    dislocates: { name: "Band Shoulder Dislocates", cat: "Mobility", cue: "Hold band overhead, rotate arms behind you and back.",
+      full: "Hold the band overhead with both hands, wider than shoulder width. Slowly rotate your arms back and down behind you, then reverse. Keep arms straight throughout; widen your grip if it feels too tight in the shoulders." },
+    ankleCalf:  { name: "Ankle Circles + Calf Raises", cat: "Mobility", cue: "Circle ankles, then rise onto toes and lower.",
+      full: "Circle each ankle slowly in both directions, then rise up onto your toes and lower back down with control. Ankle mobility directly affects how deep and stable your squat can get." },
+    deepSquat:  { name: "Deep Squat Hold", cat: "Mobility", cue: "Hold a doorframe or counter, sit into a deep squat.",
+      full: "Holding a doorframe or counter for balance, sit down into the lowest comfortable squat position and just relax there, letting your hips open." },
+    hamstring:  { name: "Hamstring Stretch", cat: "Mobility", cue: "Hinge forward, reach toward your toes, hold.",
+      full: "Standing or seated, hinge forward at the hips with a soft bend in the knees and reach toward your toes. Hold, don't bounce." },
+    hipFlexor:  { name: "Hip Flexor Stretch", cat: "Mobility", cue: "Kneel in a lunge, push hips forward gently.",
+      full: "Kneel in a lunge position with your back knee on the floor, and gently push your hips forward until you feel a stretch in the front of your back hip." },
+    proneSwim:  { name: "Prone Swim", cat: "Surf-Specific", cue: "Face down, alternate reaching arms like a paddle stroke.",
+      full: "Lie face down on a mat, lift your chest slightly, and alternate reaching your arms forward and pulling back like a paddling stroke." },
+    popUp:      { name: "Pop-Up Drills", cat: "Surf-Specific", cue: "From prone press-up, jump feet into a surf stance.",
+      full: "Start in a prone press-up position (like the top of a push-up), then in one motion jump your feet forward underneath you into a surf stance (feet roughly shoulder-width, knees bent, one foot forward). Reset and repeat. Go slow and controlled at first — speed comes later." },
+    balance:    { name: "Single-Leg Balance", cat: "Surf-Specific", cue: "Stand on one leg, eyes open then closed.",
+      full: "Stand on one leg with a soft bend in the knee. Once that's steady, close your eyes and hold again. Switch legs." },
+    mobFlow:    { name: "Full Mobility Flow", cat: "Mobility", cue: "One round each: Cat-Cow, 90/90s, Thoracic Rotations, World's Greatest Stretch, Down Dog→Cobra.",
+      full: "One round each of Cat-Cow, 90/90 Hip Switches, Thoracic Rotations, World's Greatest Stretch, and the Downward Dog → Cobra Flow, done back to back as a single sequence." },
+    walk:       { name: "Walk", cat: "Conditioning", cue: "Easy pace, can double up with a dog walk.",
+      full: "An easy-paced walk. This can double up with a regular dog walk — it doesn't need to be a separate outing." },
+    circuit:    { name: "Endurance Circuit", cat: "Conditioning", cue: "Squats x15 → Pulldown x15 → Prone Swim 30s → Plank 30s. Rest 90s between rounds.",
+      full: "A circuit done with minimal rest between exercises: Band Squats x15, Straight-Arm Pulldown x15, Prone Swim 30 sec, Plank 30 sec. Rest about 90 seconds between full rounds." },
+    superset:   { name: "Pulldown + Face Pull Superset", cat: "Conditioning", cue: "12 reps each, back to back, minimal rest.",
+      full: "Straight-Arm Pulldown and Face Pulls done back to back with minimal rest in between, for the given number of rounds, 12 reps each exercise per round." }
+  };
+
+  // sets: full-session sets/reps. mvd: true if this exercise survives the MVD cut.
+  // mvdSets: sets/reps to display when MVD mode is on (defaults to `sets` if omitted).
+  const ex = (key, sets, mvd, mvdSets) => ({ key, sets, mvd: !!mvd, mvdSets: mvdSets || sets });
+
+  // ---------- Phase day templates ----------
+  const PHASES = [
+    { // Phase 1: weeks 1-4
+      band: "Yellow / Blue",
+      days: {
+        A: { title: "Full Body Strength", list: [
+          ex("squat","3 x 12", true, "2 x 12"),
+          ex("row","3 x 12"),
+          ex("chestPress","3 x 12"),
+          ex("bridge","3 x 15"),
+          ex("plank","3 x 20-30 sec", true, "2 x 20-30 sec")
+        ]},
+        B: { title: "Full Body Strength (Variation)", list: [
+          ex("lunge","3 x 10/side", true, "2 x 10/side"),
+          ex("pulldown","3 x 12"),
+          ex("ohPress","3 x 10"),
+          ex("birdDog","3 x 10/side", true, "2 x 10/side"),
+          ex("sidePlank","2 x 20 sec/side")
+        ]},
+        C: { title: "Mobility + Light Conditioning", list: [
+          ex("catCow","10 reps", true),
+          ex("hip9090","8/side"),
+          ex("thoracic","10/side"),
+          ex("wgs","5/side"),
+          ex("downCobra","8 reps", true),
+          ex("walk","10 min")
+        ]},
+        D: { title: "Mobility + Light Conditioning", list: [
+          ex("dislocates","2 x 10"),
+          ex("ankleCalf","15 each"),
+          ex("deepSquat","3 x 20 sec", true),
+          ex("hamstring","3 x 30 sec/side", true),
+          ex("walk","10 min")
+        ]}
+      }
+    },
+    { // Phase 2: weeks 5-8
+      band: "Blue / Green",
+      days: {
+        A: { title: "Full Body Strength", list: [
+          ex("squat","4 x 12", true, "2 x 12"),
+          ex("bentRow","4 x 12"),
+          ex("chestPress","4 x 12"),
+          ex("slBridge","3 x 10/side"),
+          ex("plank","3 x 40 sec", true, "2 x 40 sec")
+        ]},
+        B: { title: "Full Body Strength", list: [
+          ex("lunge","4 x 10/side", true, "2 x 10/side"),
+          ex("pulldown","4 x 15"),
+          ex("ohPress","4 x 10"),
+          ex("pallof","3 x 10/side"),
+          ex("sidePlank","3 x 30 sec/side", true, "2 x 30 sec/side")
+        ]},
+        C: { title: "Mobility + Conditioning", list: [
+          ex("mobFlow","1 round each", true),
+          ex("woodChop","3 x 12/side"),
+          ex("walk","15-20 min", true, "10 min")
+        ]},
+        D: { title: "Paddle & Pop-Up Prep", list: [
+          ex("superset","3 rounds x 12", true, "2 rounds x 12"),
+          ex("proneSwim","3 x 20 sec"),
+          ex("popUp","3 x 8", true, "2 x 8"),
+          ex("deepSquat","3 x 30 sec"),
+          ex("hipFlexor","3 x 30 sec/side")
+        ]}
+      }
+    },
+    { // Phase 3: weeks 9-12
+      band: "Green / Grey (Red if ready)",
+      days: {
+        A: { title: "Strength", list: [
+          ex("squat","4 x 15", true, "2 x 15"),
+          ex("bentRow","4 x 15"),
+          ex("chestPress","4 x 15"),
+          ex("slBridge","3 x 12/side"),
+          ex("plank","3 x 60 sec", true, "2 x 60 sec")
+        ]},
+        B: { title: "Strength", list: [
+          ex("lunge","4 x 12/side", true, "2 x 12/side"),
+          ex("pulldown","4 x 20"),
+          ex("ohPress","4 x 12"),
+          ex("pallof","3 x 12/side"),
+          ex("sidePlank","3 x 40 sec/side", true, "2 x 40 sec/side")
+        ]},
+        C: { title: "Endurance Circuit", list: [
+          ex("circuit","3 rounds", true, "2 rounds"),
+          ex("walk","20-25 min", true, "10 min")
+        ]},
+        D: { title: "Pop-Up & Balance", list: [
+          ex("popUp","4 x 10", true, "2 x 10"),
+          ex("balance","3 x 20 sec/side", true, "2 x 20 sec/side"),
+          ex("mobFlow","1 round each"),
+          ex("deepSquat","3 x 45 sec")
+        ]}
+      }
+    }
+  ];
+
+  // ---------- Build full 48-session sequence ----------
+  const DAY_ORDER = ["A","B","C","D"];
+  const SESSIONS = [];
+  for (let week = 1; week <= 12; week++) {
+    const phaseIdx = week <= 4 ? 0 : week <= 8 ? 1 : 2;
+    const phase = PHASES[phaseIdx];
+    DAY_ORDER.forEach(letter => {
+      const d = phase.days[letter];
+      SESSIONS.push({
+        week, letter, title: d.title, band: phase.band, list: d.list
+      });
+    });
+  }
+  const TOTAL = SESSIONS.length; // 48
+
+  // ---------- Storage key ----------
+  const KEY = "surf-tracker-progress";
+
+  const root = document.getElementById("app-root");
+  let state = { index: 0, history: [] }; // index = next session to do
+  let checkedSet = new Set();
+  let expandedSet = new Set();
+  let mvdMode = false;
+  let loaded = false;
+  let guideOpen = false;
+  let guideQuery = "";
+
+  function svgTide(progressFraction) {
+    const w = 500, h = 28;
+    const fillW = Math.max(0, Math.min(1, progressFraction)) * w;
+    return `<svg class="tide-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs>
+        <clipPath id="tideClip"><rect x="0" y="0" width="${fillW}" height="${h}"></rect></clipPath>
+      </defs>
+      <rect x="0" y="10" width="${w}" height="10" rx="5" fill="var(--line-soft)"></rect>
+      <g clip-path="url(#tideClip)">
+        <path d="M0,14 Q 20,6 40,14 T 80,14 T 120,14 T 160,14 T 200,14 T 240,14 T 280,14 T 320,14 T 360,14 T 400,14 T 440,14 T 480,14 T 520,14 V28 H0 Z" fill="var(--teal)"></path>
+      </g>
+    </svg>`;
+  }
+
+  function currentDisplayList(s) {
+    return mvdMode ? s.list.filter(item => item.mvd) : s.list;
+  }
+
+  function render() {
+    if (!loaded) {
+      root.innerHTML = `<div class="loading">Loading your progress…</div>`;
+      return;
+    }
+
+    const idx = state.index;
+    const done = idx >= TOTAL;
+    const progressFrac = Math.min(idx, TOTAL) / TOTAL;
+    const completedCount = state.history.length;
+
+    let html = `
+      <div class="top-row">
+        <div>
+          <p class="eyebrow">Surf-Ready Tracker</p>
+          <h1>${done ? "Program Complete" : "Week " + SESSIONS[idx].week + " · Day " + SESSIONS[idx].letter}</h1>
+        </div>
+        <button class="guide-btn" id="btn-open-guide">Exercise Guide</button>
+      </div>
+      <p class="subtitle">${completedCount} of ${TOTAL} sessions logged</p>
+
+      <div class="tide-wrap">
+        <div class="tide-label"><span>SESSION 1</span><span>SESSION ${TOTAL}</span></div>
+        ${svgTide(progressFrac)}
+      </div>
+    `;
+
+    if (done) {
+      html += `
+        <div class="card done-state">
+          <h2>You made it through all 12 weeks.</h2>
+          <p class="subtitle">Time to check that surf trip on the calendar. If you want to keep going, you can replay the program from any point below.</p>
+          <button class="btn-primary" id="btn-restart">Start Over From Week 1</button>
+        </div>
+      `;
+    } else {
+      const s = SESSIONS[idx];
+      const displayList = currentDisplayList(s);
+      html += `
+        <div class="card">
+          <div class="session-head">
+            <span class="session-tag">SESSION ${idx + 1} / ${TOTAL}</span>
+            <span class="session-band">Bands: ${s.band}</span>
+          </div>
+          <h2>${s.title}${mvdMode ? " — MVD" : ""}</h2>
+          ${mvdMode ? '<p class="mvd-banner">Showing minimum-viable-day version only</p>' : ""}
+          <div id="exercise-list">
+      `;
+      if (displayList.length === 0) {
+        html += `<p class="guide-empty">No MVD-marked exercises for this session — try the full version instead.</p>`;
+      }
+      displayList.forEach((item) => {
+        // use the item's position in the FULL list as its stable index, for checkbox state
+        const fullIdx = s.list.indexOf(item);
+        const def = EX[item.key];
+        const checked = checkedSet.has(fullIdx);
+        const expanded = expandedSet.has(fullIdx);
+        const setsToShow = mvdMode ? item.mvdSets : item.sets;
+        html += `
+          <div class="exercise ${checked ? "checked" : ""}">
+            <input type="checkbox" data-i="${fullIdx}" ${checked ? "checked" : ""}>
+            <div class="exercise-body">
+              <div class="exercise-name-row" data-expand="${fullIdx}">
+                <span class="exercise-name">${def.name}</span>
+                <span class="exercise-sets">${setsToShow}</span>
+                ${item.mvd ? '<span class="mvd-badge">MVD</span>' : ""}
+                <span class="info-dot">i</span>
+              </div>
+              <div class="exercise-cue">${def.cue}</div>
+              ${expanded ? `<div class="exercise-full-desc">${def.full}</div>` : ""}
+            </div>
+          </div>
+        `;
+      });
+      html += `
+          </div>
+          <label class="mvd-toggle">
+            <input type="checkbox" id="mvd-check" ${mvdMode ? "checked" : ""}>
+            MVD mode — show only the minimum-viable-day exercises
+          </label>
+          <div class="actions">
+            <button class="btn-primary" id="btn-complete">Complete This Session</button>
+            <button class="btn-ghost" id="btn-skip">Skip, No Penalty</button>
+          </div>
+        </div>
+      `;
+    }
+
+    html += `
+      <div class="card">
+        <div class="footer-row">
+          <strong style="font-size:14px;">History</strong>
+          <button class="btn-text" id="btn-settings-toggle">Jump to a different session</button>
+        </div>
+        <div id="settings-panel" style="display:none;" class="settings-panel">
+          <label>Go to: </label>
+          <select id="jump-select"></select>
+          <button class="btn-text" id="btn-jump">Go</button>
+          <br><br>
+          <button class="btn-text" id="btn-reset-all" style="color:var(--clay);">Reset all progress</button>
+        </div>
+        <div class="history" id="history-list" style="margin-top:12px;">
+          ${renderHistory()}
+        </div>
+      </div>
+    `;
+
+    if (guideOpen) {
+      html += renderGuideModal();
+    }
+
+    root.innerHTML = html;
+    attachHandlers();
+  }
+
+  function renderHistory() {
+    if (state.history.length === 0) {
+      return `<p class="empty-history">Nothing logged yet — complete your first session to start the log.</p>`;
+    }
+    const recent = state.history.slice(-10).reverse();
+    return recent.map(h => {
+      const s = SESSIONS[h.sessionIndex];
+      const dateStr = new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      return `
+        <div class="history-row">
+          <span><span class="history-tag">Wk ${s.week}·${s.letter}</span> — ${s.title}</span>
+          <span>${dateStr} <span class="history-mode ${h.mode === "mvd" ? "mode-mvd" : "mode-full"}">${h.mode === "mvd" ? "MVD" : "FULL"}</span></span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderGuideModal() {
+    const q = guideQuery.trim().toLowerCase();
+    const categories = ["Strength", "Mobility", "Surf-Specific", "Conditioning"];
+    const entries = Object.entries(EX);
+
+    let anyResults = false;
+    let body = "";
+    categories.forEach(cat => {
+      const items = entries.filter(([key, def]) =>
+        def.cat === cat && (q === "" || def.name.toLowerCase().includes(q))
+      );
+      if (items.length === 0) return;
+      anyResults = true;
+      body += `<div class="guide-category">${cat}</div>`;
+      items.forEach(([key, def]) => {
+        body += `
+          <div class="guide-item">
+            <div class="guide-item-name">${def.name}</div>
+            <div class="guide-item-desc">${def.full}</div>
+          </div>
+        `;
+      });
+    });
+    if (!anyResults) {
+      body = `<p class="guide-empty">No exercises match "${guideQuery}".</p>`;
+    }
+
+    return `
+      <div class="modal-overlay" id="guide-overlay">
+        <div class="modal-box">
+          <div class="modal-head">
+            <h2 style="margin:0;">Exercise Guide</h2>
+            <button class="modal-close" id="btn-close-guide">&times;</button>
+          </div>
+          <p class="subtitle" style="margin-bottom:0;">How to do every movement in the program.</p>
+          <input type="text" class="guide-search" id="guide-search" placeholder="Search exercises…" value="${guideQuery.replace(/"/g,'&quot;')}">
+          ${body}
+        </div>
+      </div>
+    `;
+  }
+
+  function attachHandlers() {
+    root.querySelectorAll('#exercise-list input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener("change", (e) => {
+        const i = parseInt(e.target.getAttribute("data-i"), 10);
+        if (e.target.checked) checkedSet.add(i); else checkedSet.delete(i);
+        render();
+      });
+    });
+
+    root.querySelectorAll('.exercise-name-row').forEach(row => {
+      row.addEventListener("click", (e) => {
+        const i = parseInt(row.getAttribute("data-expand"), 10);
+        if (expandedSet.has(i)) expandedSet.delete(i); else expandedSet.add(i);
+        render();
+      });
+    });
+
+    const mvdCheck = document.getElementById("mvd-check");
+    if (mvdCheck) {
+      mvdCheck.addEventListener("change", (e) => {
+        mvdMode = e.target.checked;
+        checkedSet = new Set();
+        render();
+      });
+    }
+
+    const btnComplete = document.getElementById("btn-complete");
+    if (btnComplete) btnComplete.addEventListener("click", () => completeSession(mvdMode ? "mvd" : "full"));
+
+    const btnSkip = document.getElementById("btn-skip");
+    if (btnSkip) btnSkip.addEventListener("click", () => advance());
+
+    const btnRestart = document.getElementById("btn-restart");
+    if (btnRestart) btnRestart.addEventListener("click", () => { state.index = 0; checkedSet = new Set(); save(); render(); });
+
+    const toggleBtn = document.getElementById("btn-settings-toggle");
+    const panel = document.getElementById("settings-panel");
+    if (toggleBtn && panel) {
+      toggleBtn.addEventListener("click", () => {
+        panel.style.display = panel.style.display === "none" ? "block" : "none";
+        if (panel.style.display === "block") populateJumpSelect();
+      });
+    }
+
+    const btnJump = document.getElementById("btn-jump");
+    if (btnJump) {
+      btnJump.addEventListener("click", () => {
+        const sel = document.getElementById("jump-select");
+        const newIdx = parseInt(sel.value, 10);
+        state.index = newIdx;
+        checkedSet = new Set();
+        save();
+        render();
+      });
+    }
+
+    const btnResetAll = document.getElementById("btn-reset-all");
+    if (btnResetAll) {
+      btnResetAll.addEventListener("click", () => {
+        if (confirm("This clears your entire history and takes you back to Week 1, Day A. Are you sure?")) {
+          state = { index: 0, history: [] };
+          checkedSet = new Set();
+          save();
+          render();
+        }
+      });
+    }
+
+    const btnOpenGuide = document.getElementById("btn-open-guide");
+    if (btnOpenGuide) btnOpenGuide.addEventListener("click", () => { guideOpen = true; guideQuery = ""; render(); });
+
+    const btnCloseGuide = document.getElementById("btn-close-guide");
+    if (btnCloseGuide) btnCloseGuide.addEventListener("click", () => { guideOpen = false; render(); });
+
+    const overlay = document.getElementById("guide-overlay");
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) { guideOpen = false; render(); }
+      });
+    }
+
+    const guideSearch = document.getElementById("guide-search");
+    if (guideSearch) {
+      guideSearch.addEventListener("input", (e) => {
+        guideQuery = e.target.value;
+        render();
+        // restore focus + cursor position after re-render
+        const el = document.getElementById("guide-search");
+        if (el) {
+          el.focus();
+          el.selectionStart = el.selectionEnd = el.value.length;
+        }
+      });
+    }
+  }
+
+  function populateJumpSelect() {
+    const sel = document.getElementById("jump-select");
+    if (!sel) return;
+    sel.innerHTML = SESSIONS.map((s, i) =>
+      `<option value="${i}" ${i === state.index ? "selected" : ""}>Week ${s.week} · Day ${s.letter} — ${s.title}</option>`
+    ).join("");
+  }
+
+  function completeSession(mode) {
+    const idx = state.index;
+    state.history.push({ sessionIndex: idx, date: new Date().toISOString(), mode });
+    advance();
+  }
+
+  function advance() {
+    state.index += 1;
+    checkedSet = new Set();
+    expandedSet = new Set();
+    mvdMode = false;
+    save();
+    render();
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    } catch (err) {
+      console.error("Failed to save progress:", err);
+    }
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.index === "number" && Array.isArray(parsed.history)) {
+          state = parsed;
+        }
+      }
+    } catch (err) {
+      console.log("No existing progress found, starting fresh.");
+    }
+    loaded = true;
+    render();
+  }
+
+  load();
+})();
+</script>
+
+</body>
+</html>
