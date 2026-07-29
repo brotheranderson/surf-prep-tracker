@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Surf Tracker">
 <meta name="theme-color" content="#2F6F6B">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <style>
   html, body { margin: 0; padding: 0; background: #F3EFE4; }
 
@@ -185,6 +188,18 @@
   .history-detail .band-summary { font-family: ui-monospace, monospace; font-size: 11.5px; }
 
   .empty-history { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+
+  .history-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+  .form-row { margin-bottom: 12px; }
+  .form-row label { display: block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 4px; }
+  .form-row select, .form-row input[type="date"] {
+    width: 100%; font-family: inherit; font-size: 14px; padding: 8px 10px;
+    border-radius: 8px; border: 1px solid var(--line); background: white; color: var(--ink);
+  }
+  .form-band-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; gap: 10px; }
+  .form-band-item select { font-family: inherit; font-size: 12.5px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: white; }
+  .history-detail-actions { display: flex; gap: 14px; margin-top: 6px; }
+  .history-detail-actions button { padding: 0; font-size: 12px; }
 
   .done-state { text-align: center; padding: 30px 10px; }
   .done-state h2 { margin-bottom: 8px; }
@@ -408,6 +423,15 @@
   let isCompleting = false;
   let showAllHistory = false;
 
+  // History add/edit form state
+  let historyFormOpen = false;
+  let formEditingId = null;
+  let formDraft = { sessionIndex: 0, date: "", mode: "full", note: "", bandChoices: {} };
+
+  function genId() {
+    return "h_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+
   function svgTide(progressFraction) {
     const w = 500, h = 28;
     const fillW = Math.max(0, Math.min(1, progressFraction)) * w;
@@ -545,7 +569,8 @@
       <div class="card">
         <div class="footer-row">
           <strong style="font-size:14px;">History</strong>
-          <div>
+          <div style="display:flex; gap:12px;">
+            <button class="btn-text" id="btn-add-history">+ Add past session</button>
             <button class="btn-text" id="btn-settings-toggle">Jump to a different session</button>
           </div>
         </div>
@@ -556,6 +581,7 @@
           <br><br>
           <button class="btn-text" id="btn-reset-all" style="color:var(--clay);">Reset all progress</button>
         </div>
+        ${historyFormOpen ? renderHistoryForm() : ""}
         <div class="history" id="history-list" style="margin-top:12px;">
           ${renderHistory()}
         </div>
@@ -571,21 +597,20 @@
 
   function renderHistory() {
     if (state.history.length === 0) {
-      return `<p class="empty-history">Nothing logged yet — complete your first session to start the log.</p>`;
+      return `<p class="empty-history">Nothing logged yet — complete your first session, or add a past one, to start the log.</p>`;
     }
-    const withIdx = state.history.map((h, i) => ({ ...h, _i: i }));
-    const items = (showAllHistory ? withIdx.slice() : withIdx.slice(-10)).reverse();
+    const sorted = state.history.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+    const items = showAllHistory ? sorted : sorted.slice(0, 10);
     return items.map(h => {
       const s = SESSIONS[h.sessionIndex];
-      const dateStr = new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-      const expanded = expandedHistory.has(h._i);
+      const dateStr = new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      const expanded = expandedHistory.has(h.id);
       const bandEntries = Object.entries(h.bandChoices || {})
         .map(([k, v]) => `${EX[k] ? EX[k].name : k}: ${bandLabel(v)}`)
         .join(" · ");
-      const hasDetail = h.note || bandEntries;
       return `
         <div class="history-row-wrap">
-          <div class="history-row" data-hidx="${h._i}">
+          <div class="history-row" data-hid="${h.id}">
             <span><span class="history-tag">Wk ${s.week}·${s.letter}</span> — ${s.title}</span>
             <span>${dateStr} <span class="history-mode ${h.mode === "mvd" ? "mode-mvd" : "mode-full"}">${h.mode === "mvd" ? "MVD" : "FULL"}</span></span>
           </div>
@@ -593,6 +618,10 @@
             <div class="history-detail">
               ${h.note ? `<div class="note-text">"${h.note}"</div>` : `<div class="note-text" style="font-style:italic;">No notes logged.</div>`}
               ${bandEntries ? `<div class="band-summary">${bandEntries}</div>` : ""}
+              <div class="history-detail-actions">
+                <button class="btn-text" data-edit-id="${h.id}">Edit</button>
+                <button class="btn-text" data-delete-id="${h.id}" style="color:var(--clay);">Delete</button>
+              </div>
             </div>
           ` : ""}
         </div>
@@ -740,14 +769,170 @@
 
     root.querySelectorAll('.history-row').forEach(row => {
       row.addEventListener("click", () => {
-        const i = parseInt(row.getAttribute("data-hidx"), 10);
-        if (expandedHistory.has(i)) expandedHistory.delete(i); else expandedHistory.add(i);
+        const id = row.getAttribute("data-hid");
+        if (expandedHistory.has(id)) expandedHistory.delete(id); else expandedHistory.add(id);
         render();
       });
     });
 
     const btnToggleHistory = document.getElementById("btn-toggle-history");
     if (btnToggleHistory) btnToggleHistory.addEventListener("click", () => { showAllHistory = !showAllHistory; render(); });
+
+    root.querySelectorAll('[data-edit-id]').forEach(btn => {
+      btn.addEventListener("click", () => openEditHistoryForm(btn.getAttribute("data-edit-id")));
+    });
+    root.querySelectorAll('[data-delete-id]').forEach(btn => {
+      btn.addEventListener("click", () => deleteHistoryEntryById(btn.getAttribute("data-delete-id")));
+    });
+
+    const btnAddHistory = document.getElementById("btn-add-history");
+    if (btnAddHistory) btnAddHistory.addEventListener("click", () => openAddHistoryForm());
+
+    const btnSaveHistoryForm = document.getElementById("btn-save-history-form");
+    if (btnSaveHistoryForm) btnSaveHistoryForm.addEventListener("click", () => saveHistoryForm());
+
+    const btnCancelHistoryForm = document.getElementById("btn-cancel-history-form");
+    if (btnCancelHistoryForm) btnCancelHistoryForm.addEventListener("click", () => closeHistoryForm());
+
+    const formSessionSelect = document.getElementById("form-session");
+    if (formSessionSelect) {
+      formSessionSelect.addEventListener("change", (e) => {
+        syncFormDraftFromDom();
+        formDraft.sessionIndex = parseInt(e.target.value, 10);
+        render();
+      });
+    }
+  }
+
+  function openAddHistoryForm() {
+    formEditingId = null;
+    formDraft = {
+      sessionIndex: state.index < TOTAL ? state.index : 0,
+      date: new Date().toISOString().slice(0, 10),
+      mode: "full",
+      note: "",
+      bandChoices: {}
+    };
+    historyFormOpen = true;
+    render();
+  }
+
+  function openEditHistoryForm(id) {
+    const entry = state.history.find(h => h.id === id);
+    if (!entry) return;
+    formEditingId = id;
+    formDraft = {
+      sessionIndex: entry.sessionIndex,
+      date: entry.date.slice(0, 10),
+      mode: entry.mode,
+      note: entry.note || "",
+      bandChoices: { ...(entry.bandChoices || {}) }
+    };
+    historyFormOpen = true;
+    render();
+  }
+
+  function closeHistoryForm() {
+    historyFormOpen = false;
+    formEditingId = null;
+    render();
+  }
+
+  function syncFormDraftFromDom() {
+    const dateEl = document.getElementById("form-date");
+    const modeEl = document.getElementById("form-mode");
+    const noteEl = document.getElementById("form-note");
+    if (dateEl) formDraft.date = dateEl.value;
+    if (modeEl) formDraft.mode = modeEl.value;
+    if (noteEl) formDraft.note = noteEl.value;
+    document.querySelectorAll('.history-form [data-formband]').forEach(sel => {
+      formDraft.bandChoices[sel.getAttribute("data-formband")] = sel.value;
+    });
+  }
+
+  function saveHistoryForm() {
+    syncFormDraftFromDom();
+    if (!formDraft.date) { alert("Please choose a date."); return; }
+    const isoDate = new Date(formDraft.date + "T12:00:00").toISOString();
+    const bandChoices = {};
+    Object.entries(formDraft.bandChoices).forEach(([k, v]) => { if (v) bandChoices[k] = v; });
+
+    if (formEditingId) {
+      const idx = state.history.findIndex(h => h.id === formEditingId);
+      if (idx !== -1) {
+        state.history[idx] = {
+          ...state.history[idx],
+          sessionIndex: formDraft.sessionIndex,
+          date: isoDate,
+          mode: formDraft.mode,
+          note: formDraft.note.trim(),
+          bandChoices
+        };
+      }
+    } else {
+      state.history.push({
+        id: genId(),
+        sessionIndex: formDraft.sessionIndex,
+        date: isoDate,
+        mode: formDraft.mode,
+        note: formDraft.note.trim(),
+        bandChoices
+      });
+    }
+    save();
+    closeHistoryForm();
+  }
+
+  function deleteHistoryEntryById(id) {
+    if (!confirm("Delete this session entry? This can't be undone.")) return;
+    state.history = state.history.filter(h => h.id !== id);
+    save();
+    render();
+  }
+
+  function renderHistoryForm() {
+    const s = SESSIONS[formDraft.sessionIndex];
+    const bandItems = s.list.filter(item => BAND_EXERCISES.has(item.key));
+    return `
+      <div class="history-form">
+        <div class="form-row">
+          <label>Session</label>
+          <select id="form-session">
+            ${SESSIONS.map((sess, i) => `<option value="${i}" ${i === formDraft.sessionIndex ? "selected" : ""}>Week ${sess.week} · Day ${sess.letter} — ${sess.title}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Date completed</label>
+          <input type="date" id="form-date" value="${formDraft.date}">
+        </div>
+        <div class="form-row">
+          <label>Mode</label>
+          <select id="form-mode">
+            <option value="full" ${formDraft.mode === "full" ? "selected" : ""}>Full session</option>
+            <option value="mvd" ${formDraft.mode === "mvd" ? "selected" : ""}>MVD</option>
+          </select>
+        </div>
+        ${bandItems.length ? `
+          <div class="form-row">
+            <label>Bands used</label>
+            ${bandItems.map(item => `
+              <div class="form-band-item">
+                <span>${EX[item.key].name}</span>
+                <select data-formband="${item.key}">${bandOptionsHtml(formDraft.bandChoices[item.key] || "")}</select>
+              </div>
+            `).join("")}
+          </div>
+        ` : ""}
+        <div class="form-row">
+          <label>Notes</label>
+          <textarea class="notes-textarea" id="form-note" style="min-height:50px;">${formDraft.note}</textarea>
+        </div>
+        <div class="actions">
+          <button class="btn-primary" id="btn-save-history-form">${formEditingId ? "Save Changes" : "Add Session"}</button>
+          <button class="btn-ghost" id="btn-cancel-history-form">Cancel</button>
+        </div>
+      </div>
+    `;
   }
 
   function populateJumpSelect() {
@@ -762,7 +947,7 @@
     if (isCompleting) return;
     isCompleting = true;
     const idx = state.index;
-    const entry = { sessionIndex: idx, date: new Date().toISOString(), mode, bandChoices: { ...bandDraft }, note: noteDraft.trim() };
+    const entry = { id: genId(), sessionIndex: idx, date: new Date().toISOString(), mode, bandChoices: { ...bandDraft }, note: noteDraft.trim() };
     state.history.push(entry);
     save();
     launchConfetti();
@@ -855,6 +1040,13 @@
         if (typeof parsed.index === "number" && Array.isArray(parsed.history)) state = parsed;
       }
     } catch (err) { console.log("No existing progress found, starting fresh."); }
+    let migrated = false;
+    state.history.forEach(h => {
+      if (!h.id) { h.id = genId(); migrated = true; }
+      if (!h.bandChoices) { h.bandChoices = {}; migrated = true; }
+      if (typeof h.note !== "string") { h.note = ""; migrated = true; }
+    });
+    if (migrated) save();
     loaded = true;
     render();
   }
