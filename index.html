@@ -10,11 +10,12 @@
 <meta name="theme-color" content="#2F6F6B">
 <style>
   html, body { margin: 0; padding: 0; background: #F3EFE4; }
-</style>
-</head>
-<body>
-<div id="app-root"></div>
-<style>
+
+  @keyframes confetti-fall {
+    0%   { transform: translateY(-10px) translateX(0) rotate(var(--r0)); opacity: 1; }
+    100% { transform: translateY(115vh) translateX(var(--drift)) rotate(var(--r1)); opacity: 0; }
+  }
+
   #app-root {
     --bg: #F3EFE4;
     --card: #FBF8EF;
@@ -32,7 +33,7 @@
     background: var(--bg);
     max-width: 560px;
     margin: 0 auto;
-    padding: 28px 20px 60px;
+    padding: calc(env(safe-area-inset-top, 0px) + 28px) 20px calc(env(safe-area-inset-bottom, 0px) + 60px);
     box-sizing: border-box;
     position: relative;
   }
@@ -54,11 +55,7 @@
     margin: 0 0 2px;
     letter-spacing: -0.01em;
   }
-  .subtitle {
-    color: var(--ink-soft);
-    font-size: 14px;
-    margin: 0 0 22px;
-  }
+  .subtitle { color: var(--ink-soft); font-size: 14px; margin: 0 0 22px; }
 
   .guide-btn {
     background: transparent;
@@ -74,7 +71,6 @@
   }
   .guide-btn:hover { background: var(--line-soft); }
 
-  /* Tide progress bar - signature element */
   .tide-wrap { margin-bottom: 26px; }
   .tide-label {
     display: flex;
@@ -109,16 +105,8 @@
     padding: 3px 8px;
     border-radius: 5px;
   }
-  .session-band {
-    font-size: 12px;
-    color: var(--ink-soft);
-  }
-  h2 {
-    font-family: Georgia, serif;
-    font-weight: 400;
-    font-size: 21px;
-    margin: 6px 0 4px;
-  }
+  .session-band { font-size: 12px; color: var(--ink-soft); }
+  h2 { font-family: Georgia, serif; font-weight: 400; font-size: 21px; margin: 6px 0 4px; }
   .mvd-banner {
     font-family: ui-monospace, monospace;
     font-size: 11.5px;
@@ -127,216 +115,136 @@
     margin: 0 0 14px;
   }
 
-  .exercise {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 0;
-    border-top: 1px solid var(--line-soft);
-  }
+  .exercise { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-soft); }
   .exercise:first-of-type { border-top: none; }
-  .exercise input[type="checkbox"] {
-    margin-top: 3px;
-    width: 17px;
-    height: 17px;
-    accent-color: var(--teal);
-    flex-shrink: 0;
-  }
+  .exercise input[type="checkbox"] { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--teal); flex-shrink: 0; }
   .exercise-body { flex: 1; min-width: 0; }
-  .exercise-name-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    cursor: pointer;
-  }
+  .exercise-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; cursor: pointer; }
   .exercise-name { font-weight: 600; font-size: 15px; }
   .exercise-name:hover { text-decoration: underline; text-decoration-style: dotted; }
-  .exercise-sets {
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
-    font-size: 12.5px;
-    color: var(--teal-deep);
-  }
+  .exercise-sets { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; color: var(--teal-deep); }
   .mvd-badge {
-    font-size: 10px;
-    font-family: ui-monospace, monospace;
-    letter-spacing: 0.05em;
-    color: var(--gold);
-    border: 1px solid var(--gold);
-    border-radius: 4px;
-    padding: 1px 5px;
+    font-size: 10px; font-family: ui-monospace, monospace; letter-spacing: 0.05em;
+    color: var(--gold); border: 1px solid var(--gold); border-radius: 4px; padding: 1px 5px;
   }
   .info-dot {
-    font-size: 11px;
-    color: var(--ink-soft);
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    width: 15px;
-    height: 15px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 50%;
+    width: 15px; height: 15px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .exercise-cue {
-    color: var(--ink-soft);
-    font-size: 13px;
-    margin-top: 2px;
-    line-height: 1.4;
-  }
+  .exercise-cue { color: var(--ink-soft); font-size: 13px; margin-top: 2px; line-height: 1.4; }
   .exercise-full-desc {
-    background: var(--line-soft);
-    border-radius: 6px;
-    padding: 10px 12px;
-    margin-top: 8px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: var(--ink);
+    background: var(--line-soft); border-radius: 6px; padding: 10px 12px; margin-top: 8px;
+    font-size: 13px; line-height: 1.5; color: var(--ink);
   }
   .exercise.checked .exercise-name { text-decoration: line-through; color: var(--ink-soft); }
 
+  .band-row { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .band-label { font-size: 12.5px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; }
+  .band-select {
+    font-family: inherit; font-size: 12.5px; padding: 4px 6px; border-radius: 6px;
+    border: 1px solid var(--line); background: white; color: var(--ink);
+  }
+  .band-last { font-size: 11.5px; color: var(--ink-soft); }
+  .band-last strong { color: var(--teal-deep); }
+
+  .notes-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+  .notes-block label { font-size: 13px; color: var(--ink-soft); display: block; margin-bottom: 6px; }
+  .notes-textarea {
+    width: 100%; min-height: 64px; font-family: inherit; font-size: 14px; padding: 10px 12px;
+    border-radius: 8px; border: 1px solid var(--line); resize: vertical; background: white; color: var(--ink);
+  }
+
   .mvd-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--ink-soft);
-    margin: 16px 0 4px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft);
+    margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--line-soft);
   }
   .mvd-toggle input { accent-color: var(--gold); }
 
   .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
   button {
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    border-radius: 8px;
-    padding: 11px 16px;
-    border: none;
-    cursor: pointer;
-    transition: opacity 0.15s;
+    font-family: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 11px 16px;
+    border: none; cursor: pointer; transition: opacity 0.15s;
   }
   button:hover { opacity: 0.88; }
   button:active { opacity: 0.7; }
+  button:disabled { opacity: 0.5; cursor: default; }
   .btn-primary { background: var(--teal); color: white; flex: 1; min-width: 140px; }
   .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); }
   .btn-text { background: none; color: var(--teal-deep); padding: 6px 4px; font-weight: 500; text-decoration: underline; }
 
-  .history {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .history-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    padding: 7px 0;
-    border-top: 1px solid var(--line-soft);
-    color: var(--ink-soft);
-  }
-  .history-row:first-child { border-top: none; }
+  .history { display: flex; flex-direction: column; gap: 6px; }
+  .history-row-wrap { border-top: 1px solid var(--line-soft); }
+  .history-row-wrap:first-child { border-top: none; }
+  .history-row { display: flex; justify-content: space-between; font-size: 13px; padding: 9px 0; color: var(--ink-soft); cursor: pointer; }
   .history-tag { color: var(--ink); font-weight: 600; }
   .history-mode { font-family: ui-monospace, monospace; font-size: 11px; }
   .mode-full { color: var(--teal-deep); }
   .mode-mvd { color: var(--gold); }
+  .history-detail { font-size: 12.5px; color: var(--ink-soft); padding: 0 0 10px; line-height: 1.5; }
+  .history-detail .note-text { color: var(--ink); margin-bottom: 4px; }
+  .history-detail .band-summary { font-family: ui-monospace, monospace; font-size: 11.5px; }
 
   .empty-history { font-size: 13px; color: var(--ink-soft); font-style: italic; }
 
-  .done-state {
-    text-align: center;
-    padding: 30px 10px;
-  }
+  .done-state { text-align: center; padding: 30px 10px; }
   .done-state h2 { margin-bottom: 8px; }
 
-  .footer-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 4px;
-  }
+  .footer-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; flex-wrap: wrap; gap: 8px; }
 
-  .settings-panel {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line-soft);
-    font-size: 13px;
-  }
+  .settings-panel { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); font-size: 13px; }
   select {
-    font-family: inherit;
-    font-size: 13px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-    background: white;
+    font-family: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px;
+    border: 1px solid var(--line); background: white;
   }
 
   .loading { color: var(--ink-soft); font-size: 14px; padding: 20px 0; }
 
-  /* Exercise guide modal */
   .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(30, 43, 42, 0.45);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 40px 16px;
-    z-index: 100;
-    overflow-y: auto;
+    position: fixed; inset: 0; background: rgba(30, 43, 42, 0.45);
+    display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 100; overflow-y: auto;
   }
-  .modal-box {
-    background: var(--bg);
-    border-radius: 12px;
-    max-width: 540px;
-    width: 100%;
-    padding: 24px 22px 30px;
-    border: 1px solid var(--line);
-  }
-  .modal-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-  }
-  .modal-close {
-    background: none;
-    border: none;
-    font-size: 22px;
-    line-height: 1;
-    color: var(--ink-soft);
-    cursor: pointer;
-    padding: 2px 6px;
-  }
+  .modal-box { background: var(--bg); border-radius: 12px; max-width: 540px; width: 100%; padding: 24px 22px 30px; border: 1px solid var(--line); }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .modal-close { background: none; border: none; font-size: 22px; line-height: 1; color: var(--ink-soft); cursor: pointer; padding: 2px 6px; }
   .guide-search {
-    width: 100%;
-    padding: 9px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--line);
-    font-size: 14px;
-    font-family: inherit;
-    margin: 14px 0 18px;
+    width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line);
+    font-size: 14px; font-family: inherit; margin: 14px 0 18px;
   }
   .guide-category {
-    font-family: ui-monospace, monospace;
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--teal);
-    margin: 20px 0 8px;
+    font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--teal); margin: 20px 0 8px;
   }
   .guide-category:first-of-type { margin-top: 0; }
   .guide-item { padding: 10px 0; border-top: 1px solid var(--line-soft); }
   .guide-item:first-of-type { border-top: none; }
   .guide-item-name { font-weight: 600; font-size: 14.5px; margin-bottom: 3px; }
   .guide-item-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+  .guide-item-band { font-size: 11.5px; color: var(--teal-deep); margin-top: 4px; }
   .guide-empty { font-size: 13px; color: var(--ink-soft); font-style: italic; padding: 10px 0; }
 </style>
-
+</head>
+<body>
+<div id="app-root"></div>
 <script>
 (function() {
+  // ---------- Band reference ----------
+  const BANDS = [
+    { key: "yellow", label: "Yellow · 10 lb" },
+    { key: "blue",   label: "Blue · 20 lb" },
+    { key: "green",  label: "Green · 30 lb" },
+    { key: "grey",   label: "Grey · 40 lb" },
+    { key: "red",    label: "Red · 50 lb" }
+  ];
+  function bandLabel(key) {
+    const b = BANDS.find(x => x.key === key);
+    return b ? b.label : key;
+  }
+
+  const BAND_EXERCISES = new Set([
+    "squat","lunge","row","bentRow","chestPress","ohPress","pulldown","facePull",
+    "bridge","slBridge","pallof","woodChop","dislocates","superset","circuit"
+  ]);
+
   // ---------- Exercise library: short cue (shown inline) + full description (guide/expand) ----------
   const EX = {
     squat:      { name: "Band Squat", cat: "Strength", cue: "Stand on band, handles at shoulders, squat to comfortable depth.",
@@ -355,10 +263,10 @@
       full: "Anchor the band high on the door. With arms straight (a slight bend at the elbow is fine), pull the handles down and back toward your hips in an arc. This mimics a paddling stroke — treat it as practice for the motion itself, not just a strength exercise." },
     facePull:   { name: "Face Pulls", cat: "Strength", cue: "Anchor at chest height, pull to face, elbows high.",
       full: "Anchor the band at chest height. Pull both handles toward your face, leading with your elbows so they finish higher than your hands. Good for shoulder health, which matters a lot once you're paddling regularly." },
-    bridge:     { name: "Glute Bridge", cat: "Strength", cue: "Band around thighs, lie on back, drive hips up.",
-      full: "Lie on your back, knees bent, band looped around your thighs just above the knee. Drive your hips up toward the ceiling, squeezing your glutes at the top, then lower." },
-    slBridge:   { name: "Single-Leg Glute Bridge", cat: "Strength", cue: "Same as bridge, one leg extended straight.",
-      full: "Same setup as the Glute Bridge, but extend one leg straight out and press through the heel of the other. Switch sides." },
+    bridge:     { name: "Glute Bridge", cat: "Strength", cue: "Band across hip crease, hands anchor it to the floor, drive hips up.",
+      full: "Lie on your back, knees bent, feet flat on the floor. Drape the band across your hip crease, right where a barbell would sit for a hip thrust — a folded towel or shirt underneath helps if it digs in. Hold one handle in each hand and press your hands firmly into the floor to anchor the band. Drive your hips up, squeezing your glutes at the top, then lower with control. (A band looped around your thighs works too, but it mainly resists your knees caving in rather than loading hip extension — this hip-anchored version is the better match for what a glute bridge is meant to train.)" },
+    slBridge:   { name: "Single-Leg Glute Bridge", cat: "Strength", cue: "Same hip anchor as Glute Bridge, one leg extended straight.",
+      full: "Same setup as the Glute Bridge — band anchored across your hips with your hands pressed into the floor — but extend one leg straight out and press through the heel of the other. Switch sides." },
     plank:      { name: "Plank", cat: "Strength", cue: "Forearms down, straight line from head to heels.",
       full: "Forearms on the floor, elbows under shoulders, body in a straight line from head to heels. Don't let your hips sag or pike up." },
     sidePlank:  { name: "Side Plank", cat: "Strength", cue: "Stack feet, prop on one forearm, hips lifted.",
@@ -405,109 +313,73 @@
       full: "Straight-Arm Pulldown and Face Pulls done back to back with minimal rest in between, for the given number of rounds, 12 reps each exercise per round." }
   };
 
-  // sets: full-session sets/reps. mvd: true if this exercise survives the MVD cut.
-  // mvdSets: sets/reps to display when MVD mode is on (defaults to `sets` if omitted).
   const ex = (key, sets, mvd, mvdSets) => ({ key, sets, mvd: !!mvd, mvdSets: mvdSets || sets });
 
   // ---------- Phase day templates ----------
   const PHASES = [
-    { // Phase 1: weeks 1-4
+    {
       band: "Yellow / Blue",
       days: {
         A: { title: "Full Body Strength", list: [
-          ex("squat","3 x 12", true, "2 x 12"),
-          ex("row","3 x 12"),
-          ex("chestPress","3 x 12"),
-          ex("bridge","3 x 15"),
-          ex("plank","3 x 20-30 sec", true, "2 x 20-30 sec")
+          ex("squat","3 x 12", true, "2 x 12"), ex("row","3 x 12"), ex("chestPress","3 x 12"),
+          ex("bridge","3 x 15"), ex("plank","3 x 20-30 sec", true, "2 x 20-30 sec")
         ]},
         B: { title: "Full Body Strength (Variation)", list: [
-          ex("lunge","3 x 10/side", true, "2 x 10/side"),
-          ex("pulldown","3 x 12"),
-          ex("ohPress","3 x 10"),
-          ex("birdDog","3 x 10/side", true, "2 x 10/side"),
-          ex("sidePlank","2 x 20 sec/side")
+          ex("lunge","3 x 10/side", true, "2 x 10/side"), ex("pulldown","3 x 12"), ex("ohPress","3 x 10"),
+          ex("birdDog","3 x 10/side", true, "2 x 10/side"), ex("sidePlank","2 x 20 sec/side")
         ]},
         C: { title: "Mobility + Light Conditioning", list: [
-          ex("catCow","10 reps", true),
-          ex("hip9090","8/side"),
-          ex("thoracic","10/side"),
-          ex("wgs","5/side"),
-          ex("downCobra","8 reps", true),
-          ex("walk","10 min")
+          ex("catCow","10 reps", true), ex("hip9090","8/side"), ex("thoracic","10/side"),
+          ex("wgs","5/side"), ex("downCobra","8 reps", true), ex("walk","10 min")
         ]},
         D: { title: "Mobility + Light Conditioning", list: [
-          ex("dislocates","2 x 10"),
-          ex("ankleCalf","15 each"),
-          ex("deepSquat","3 x 20 sec", true),
-          ex("hamstring","3 x 30 sec/side", true),
-          ex("walk","10 min")
+          ex("dislocates","2 x 10"), ex("ankleCalf","15 each"), ex("deepSquat","3 x 20 sec", true),
+          ex("hamstring","3 x 30 sec/side", true), ex("walk","10 min")
         ]}
       }
     },
-    { // Phase 2: weeks 5-8
+    {
       band: "Blue / Green",
       days: {
         A: { title: "Full Body Strength", list: [
-          ex("squat","4 x 12", true, "2 x 12"),
-          ex("bentRow","4 x 12"),
-          ex("chestPress","4 x 12"),
-          ex("slBridge","3 x 10/side"),
-          ex("plank","3 x 40 sec", true, "2 x 40 sec")
+          ex("squat","4 x 12", true, "2 x 12"), ex("bentRow","4 x 12"), ex("chestPress","4 x 12"),
+          ex("slBridge","3 x 10/side"), ex("plank","3 x 40 sec", true, "2 x 40 sec")
         ]},
         B: { title: "Full Body Strength", list: [
-          ex("lunge","4 x 10/side", true, "2 x 10/side"),
-          ex("pulldown","4 x 15"),
-          ex("ohPress","4 x 10"),
-          ex("pallof","3 x 10/side"),
-          ex("sidePlank","3 x 30 sec/side", true, "2 x 30 sec/side")
+          ex("lunge","4 x 10/side", true, "2 x 10/side"), ex("pulldown","4 x 15"), ex("ohPress","4 x 10"),
+          ex("pallof","3 x 10/side"), ex("sidePlank","3 x 30 sec/side", true, "2 x 30 sec/side")
         ]},
         C: { title: "Mobility + Conditioning", list: [
-          ex("mobFlow","1 round each", true),
-          ex("woodChop","3 x 12/side"),
-          ex("walk","15-20 min", true, "10 min")
+          ex("mobFlow","1 round each", true), ex("woodChop","3 x 12/side"), ex("walk","15-20 min", true, "10 min")
         ]},
         D: { title: "Paddle & Pop-Up Prep", list: [
-          ex("superset","3 rounds x 12", true, "2 rounds x 12"),
-          ex("proneSwim","3 x 20 sec"),
-          ex("popUp","3 x 8", true, "2 x 8"),
-          ex("deepSquat","3 x 30 sec"),
-          ex("hipFlexor","3 x 30 sec/side")
+          ex("superset","3 rounds x 12", true, "2 rounds x 12"), ex("proneSwim","3 x 20 sec"),
+          ex("popUp","3 x 8", true, "2 x 8"), ex("deepSquat","3 x 30 sec"), ex("hipFlexor","3 x 30 sec/side")
         ]}
       }
     },
-    { // Phase 3: weeks 9-12
+    {
       band: "Green / Grey (Red if ready)",
       days: {
         A: { title: "Strength", list: [
-          ex("squat","4 x 15", true, "2 x 15"),
-          ex("bentRow","4 x 15"),
-          ex("chestPress","4 x 15"),
-          ex("slBridge","3 x 12/side"),
-          ex("plank","3 x 60 sec", true, "2 x 60 sec")
+          ex("squat","4 x 15", true, "2 x 15"), ex("bentRow","4 x 15"), ex("chestPress","4 x 15"),
+          ex("slBridge","3 x 12/side"), ex("plank","3 x 60 sec", true, "2 x 60 sec")
         ]},
         B: { title: "Strength", list: [
-          ex("lunge","4 x 12/side", true, "2 x 12/side"),
-          ex("pulldown","4 x 20"),
-          ex("ohPress","4 x 12"),
-          ex("pallof","3 x 12/side"),
-          ex("sidePlank","3 x 40 sec/side", true, "2 x 40 sec/side")
+          ex("lunge","4 x 12/side", true, "2 x 12/side"), ex("pulldown","4 x 20"), ex("ohPress","4 x 12"),
+          ex("pallof","3 x 12/side"), ex("sidePlank","3 x 40 sec/side", true, "2 x 40 sec/side")
         ]},
         C: { title: "Endurance Circuit", list: [
-          ex("circuit","3 rounds", true, "2 rounds"),
-          ex("walk","20-25 min", true, "10 min")
+          ex("circuit","3 rounds", true, "2 rounds"), ex("walk","20-25 min", true, "10 min")
         ]},
         D: { title: "Pop-Up & Balance", list: [
-          ex("popUp","4 x 10", true, "2 x 10"),
-          ex("balance","3 x 20 sec/side", true, "2 x 20 sec/side"),
-          ex("mobFlow","1 round each"),
-          ex("deepSquat","3 x 45 sec")
+          ex("popUp","4 x 10", true, "2 x 10"), ex("balance","3 x 20 sec/side", true, "2 x 20 sec/side"),
+          ex("mobFlow","1 round each"), ex("deepSquat","3 x 45 sec")
         ]}
       }
     }
   ];
 
-  // ---------- Build full 48-session sequence ----------
   const DAY_ORDER = ["A","B","C","D"];
   const SESSIONS = [];
   for (let week = 1; week <= 12; week++) {
@@ -515,32 +387,32 @@
     const phase = PHASES[phaseIdx];
     DAY_ORDER.forEach(letter => {
       const d = phase.days[letter];
-      SESSIONS.push({
-        week, letter, title: d.title, band: phase.band, list: d.list
-      });
+      SESSIONS.push({ week, letter, title: d.title, band: phase.band, list: d.list });
     });
   }
-  const TOTAL = SESSIONS.length; // 48
+  const TOTAL = SESSIONS.length;
 
-  // ---------- Storage key ----------
   const KEY = "surf-tracker-progress";
-
   const root = document.getElementById("app-root");
-  let state = { index: 0, history: [] }; // index = next session to do
+
+  let state = { index: 0, history: [] };
   let checkedSet = new Set();
   let expandedSet = new Set();
+  let expandedHistory = new Set();
   let mvdMode = false;
   let loaded = false;
   let guideOpen = false;
   let guideQuery = "";
+  let bandDraft = {};
+  let noteDraft = "";
+  let isCompleting = false;
+  let showAllHistory = false;
 
   function svgTide(progressFraction) {
     const w = 500, h = 28;
     const fillW = Math.max(0, Math.min(1, progressFraction)) * w;
     return `<svg class="tide-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-      <defs>
-        <clipPath id="tideClip"><rect x="0" y="0" width="${fillW}" height="${h}"></rect></clipPath>
-      </defs>
+      <defs><clipPath id="tideClip"><rect x="0" y="0" width="${fillW}" height="${h}"></rect></clipPath></defs>
       <rect x="0" y="10" width="${w}" height="10" rx="5" fill="var(--line-soft)"></rect>
       <g clip-path="url(#tideClip)">
         <path d="M0,14 Q 20,6 40,14 T 80,14 T 120,14 T 160,14 T 200,14 T 240,14 T 280,14 T 320,14 T 360,14 T 400,14 T 440,14 T 480,14 T 520,14 V28 H0 Z" fill="var(--teal)"></path>
@@ -548,15 +420,33 @@
     </svg>`;
   }
 
-  function currentDisplayList(s) {
-    return mvdMode ? s.list.filter(item => item.mvd) : s.list;
+  function currentDisplayList(s) { return mvdMode ? s.list.filter(item => item.mvd) : s.list; }
+
+  function lastBandUsed(key) {
+    for (let i = state.history.length - 1; i >= 0; i--) {
+      const entry = state.history[i];
+      if (entry.bandChoices && entry.bandChoices[key]) {
+        return { color: entry.bandChoices[key], entry };
+      }
+    }
+    return null;
+  }
+
+  function lastBandHtml(key) {
+    const last = lastBandUsed(key);
+    if (!last) return `<span class="band-last">No previous log for this exercise yet</span>`;
+    const s = SESSIONS[last.entry.sessionIndex];
+    const dateStr = new Date(last.entry.date).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `<span class="band-last">Last used: <strong>${bandLabel(last.color)}</strong> · Wk ${s.week}·${s.letter} (${dateStr})</span>`;
+  }
+
+  function bandOptionsHtml(selectedVal) {
+    return `<option value="">— not logged —</option>` +
+      BANDS.map(b => `<option value="${b.key}" ${selectedVal === b.key ? "selected" : ""}>${b.label}</option>`).join("");
   }
 
   function render() {
-    if (!loaded) {
-      root.innerHTML = `<div class="loading">Loading your progress…</div>`;
-      return;
-    }
+    if (!loaded) { root.innerHTML = `<div class="loading">Loading your progress…</div>`; return; }
 
     const idx = state.index;
     const done = idx >= TOTAL;
@@ -572,7 +462,6 @@
         <button class="guide-btn" id="btn-open-guide">Exercise Guide</button>
       </div>
       <p class="subtitle">${completedCount} of ${TOTAL} sessions logged</p>
-
       <div class="tide-wrap">
         <div class="tide-label"><span>SESSION 1</span><span>SESSION ${TOTAL}</span></div>
         ${svgTide(progressFrac)}
@@ -604,12 +493,12 @@
         html += `<p class="guide-empty">No MVD-marked exercises for this session — try the full version instead.</p>`;
       }
       displayList.forEach((item) => {
-        // use the item's position in the FULL list as its stable index, for checkbox state
         const fullIdx = s.list.indexOf(item);
         const def = EX[item.key];
         const checked = checkedSet.has(fullIdx);
         const expanded = expandedSet.has(fullIdx);
         const setsToShow = mvdMode ? item.mvdSets : item.sets;
+        const isBandEx = BAND_EXERCISES.has(item.key);
         html += `
           <div class="exercise ${checked ? "checked" : ""}">
             <input type="checkbox" data-i="${fullIdx}" ${checked ? "checked" : ""}>
@@ -622,6 +511,14 @@
               </div>
               <div class="exercise-cue">${def.cue}</div>
               ${expanded ? `<div class="exercise-full-desc">${def.full}</div>` : ""}
+              ${isBandEx ? `
+                <div class="band-row">
+                  <label class="band-label">Band used:
+                    <select class="band-select" data-bandkey="${item.key}">${bandOptionsHtml(bandDraft[item.key] || "")}</select>
+                  </label>
+                  ${lastBandHtml(item.key)}
+                </div>
+              ` : ""}
             </div>
           </div>
         `;
@@ -632,9 +529,13 @@
             <input type="checkbox" id="mvd-check" ${mvdMode ? "checked" : ""}>
             MVD mode — show only the minimum-viable-day exercises
           </label>
+          <div class="notes-block">
+            <label for="notes-textarea">Session notes (optional) — how did it feel, any modifications?</label>
+            <textarea class="notes-textarea" id="notes-textarea" placeholder="e.g. knee felt a little tight on lunges, dropped to blue band">${noteDraft}</textarea>
+          </div>
           <div class="actions">
-            <button class="btn-primary" id="btn-complete">Complete This Session</button>
-            <button class="btn-ghost" id="btn-skip">Skip, No Penalty</button>
+            <button class="btn-primary" id="btn-complete" ${isCompleting ? "disabled" : ""}>Complete This Session</button>
+            <button class="btn-ghost" id="btn-skip" ${isCompleting ? "disabled" : ""}>Skip, No Penalty</button>
           </div>
         </div>
       `;
@@ -644,7 +545,9 @@
       <div class="card">
         <div class="footer-row">
           <strong style="font-size:14px;">History</strong>
-          <button class="btn-text" id="btn-settings-toggle">Jump to a different session</button>
+          <div>
+            <button class="btn-text" id="btn-settings-toggle">Jump to a different session</button>
+          </div>
         </div>
         <div id="settings-panel" style="display:none;" class="settings-panel">
           <label>Go to: </label>
@@ -656,12 +559,11 @@
         <div class="history" id="history-list" style="margin-top:12px;">
           ${renderHistory()}
         </div>
+        ${state.history.length > 10 ? `<button class="btn-text" id="btn-toggle-history" style="margin-top:8px;">${showAllHistory ? "Show recent only" : "Show full history (" + state.history.length + ")"}</button>` : ""}
       </div>
     `;
 
-    if (guideOpen) {
-      html += renderGuideModal();
-    }
+    if (guideOpen) html += renderGuideModal();
 
     root.innerHTML = html;
     attachHandlers();
@@ -671,14 +573,28 @@
     if (state.history.length === 0) {
       return `<p class="empty-history">Nothing logged yet — complete your first session to start the log.</p>`;
     }
-    const recent = state.history.slice(-10).reverse();
-    return recent.map(h => {
+    const withIdx = state.history.map((h, i) => ({ ...h, _i: i }));
+    const items = (showAllHistory ? withIdx.slice() : withIdx.slice(-10)).reverse();
+    return items.map(h => {
       const s = SESSIONS[h.sessionIndex];
       const dateStr = new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const expanded = expandedHistory.has(h._i);
+      const bandEntries = Object.entries(h.bandChoices || {})
+        .map(([k, v]) => `${EX[k] ? EX[k].name : k}: ${bandLabel(v)}`)
+        .join(" · ");
+      const hasDetail = h.note || bandEntries;
       return `
-        <div class="history-row">
-          <span><span class="history-tag">Wk ${s.week}·${s.letter}</span> — ${s.title}</span>
-          <span>${dateStr} <span class="history-mode ${h.mode === "mvd" ? "mode-mvd" : "mode-full"}">${h.mode === "mvd" ? "MVD" : "FULL"}</span></span>
+        <div class="history-row-wrap">
+          <div class="history-row" data-hidx="${h._i}">
+            <span><span class="history-tag">Wk ${s.week}·${s.letter}</span> — ${s.title}</span>
+            <span>${dateStr} <span class="history-mode ${h.mode === "mvd" ? "mode-mvd" : "mode-full"}">${h.mode === "mvd" ? "MVD" : "FULL"}</span></span>
+          </div>
+          ${expanded ? `
+            <div class="history-detail">
+              ${h.note ? `<div class="note-text">"${h.note}"</div>` : `<div class="note-text" style="font-style:italic;">No notes logged.</div>`}
+              ${bandEntries ? `<div class="band-summary">${bandEntries}</div>` : ""}
+            </div>
+          ` : ""}
         </div>
       `;
     }).join("");
@@ -692,24 +608,28 @@
     let anyResults = false;
     let body = "";
     categories.forEach(cat => {
-      const items = entries.filter(([key, def]) =>
-        def.cat === cat && (q === "" || def.name.toLowerCase().includes(q))
-      );
+      const items = entries.filter(([key, def]) => def.cat === cat && (q === "" || def.name.toLowerCase().includes(q)));
       if (items.length === 0) return;
       anyResults = true;
       body += `<div class="guide-category">${cat}</div>`;
       items.forEach(([key, def]) => {
+        const last = BAND_EXERCISES.has(key) ? lastBandUsed(key) : null;
+        let lastHtml = "";
+        if (BAND_EXERCISES.has(key)) {
+          lastHtml = last
+            ? `<div class="guide-item-band">Last band used: ${bandLabel(last.color)} · Wk ${SESSIONS[last.entry.sessionIndex].week}·${SESSIONS[last.entry.sessionIndex].letter}</div>`
+            : `<div class="guide-item-band">No band logged yet for this exercise</div>`;
+        }
         body += `
           <div class="guide-item">
             <div class="guide-item-name">${def.name}</div>
             <div class="guide-item-desc">${def.full}</div>
+            ${lastHtml}
           </div>
         `;
       });
     });
-    if (!anyResults) {
-      body = `<p class="guide-empty">No exercises match "${guideQuery}".</p>`;
-    }
+    if (!anyResults) body = `<p class="guide-empty">No exercises match "${guideQuery}".</p>`;
 
     return `
       <div class="modal-overlay" id="guide-overlay">
@@ -743,20 +663,28 @@
       });
     });
 
+    root.querySelectorAll('.band-select').forEach(sel => {
+      sel.addEventListener("change", (e) => {
+        const key = e.target.getAttribute("data-bandkey");
+        bandDraft[key] = e.target.value;
+      });
+    });
+
+    const notesArea = document.getElementById("notes-textarea");
+    if (notesArea) {
+      notesArea.addEventListener("input", (e) => { noteDraft = e.target.value; });
+    }
+
     const mvdCheck = document.getElementById("mvd-check");
     if (mvdCheck) {
-      mvdCheck.addEventListener("change", (e) => {
-        mvdMode = e.target.checked;
-        checkedSet = new Set();
-        render();
-      });
+      mvdCheck.addEventListener("change", (e) => { mvdMode = e.target.checked; checkedSet = new Set(); render(); });
     }
 
     const btnComplete = document.getElementById("btn-complete");
     if (btnComplete) btnComplete.addEventListener("click", () => completeSession(mvdMode ? "mvd" : "full"));
 
     const btnSkip = document.getElementById("btn-skip");
-    if (btnSkip) btnSkip.addEventListener("click", () => advance());
+    if (btnSkip) btnSkip.addEventListener("click", () => { if (!isCompleting) advance(); });
 
     const btnRestart = document.getElementById("btn-restart");
     if (btnRestart) btnRestart.addEventListener("click", () => { state.index = 0; checkedSet = new Set(); save(); render(); });
@@ -774,11 +702,9 @@
     if (btnJump) {
       btnJump.addEventListener("click", () => {
         const sel = document.getElementById("jump-select");
-        const newIdx = parseInt(sel.value, 10);
-        state.index = newIdx;
+        state.index = parseInt(sel.value, 10);
         checkedSet = new Set();
-        save();
-        render();
+        save(); render();
       });
     }
 
@@ -788,8 +714,7 @@
         if (confirm("This clears your entire history and takes you back to Week 1, Day A. Are you sure?")) {
           state = { index: 0, history: [] };
           checkedSet = new Set();
-          save();
-          render();
+          save(); render();
         }
       });
     }
@@ -801,25 +726,28 @@
     if (btnCloseGuide) btnCloseGuide.addEventListener("click", () => { guideOpen = false; render(); });
 
     const overlay = document.getElementById("guide-overlay");
-    if (overlay) {
-      overlay.addEventListener("click", (e) => {
-        if (e.target === overlay) { guideOpen = false; render(); }
-      });
-    }
+    if (overlay) overlay.addEventListener("click", (e) => { if (e.target === overlay) { guideOpen = false; render(); } });
 
     const guideSearch = document.getElementById("guide-search");
     if (guideSearch) {
       guideSearch.addEventListener("input", (e) => {
         guideQuery = e.target.value;
         render();
-        // restore focus + cursor position after re-render
         const el = document.getElementById("guide-search");
-        if (el) {
-          el.focus();
-          el.selectionStart = el.selectionEnd = el.value.length;
-        }
+        if (el) { el.focus(); el.selectionStart = el.selectionEnd = el.value.length; }
       });
     }
+
+    root.querySelectorAll('.history-row').forEach(row => {
+      row.addEventListener("click", () => {
+        const i = parseInt(row.getAttribute("data-hidx"), 10);
+        if (expandedHistory.has(i)) expandedHistory.delete(i); else expandedHistory.add(i);
+        render();
+      });
+    });
+
+    const btnToggleHistory = document.getElementById("btn-toggle-history");
+    if (btnToggleHistory) btnToggleHistory.addEventListener("click", () => { showAllHistory = !showAllHistory; render(); });
   }
 
   function populateJumpSelect() {
@@ -831,9 +759,15 @@
   }
 
   function completeSession(mode) {
+    if (isCompleting) return;
+    isCompleting = true;
     const idx = state.index;
-    state.history.push({ sessionIndex: idx, date: new Date().toISOString(), mode });
-    advance();
+    const entry = { sessionIndex: idx, date: new Date().toISOString(), mode, bandChoices: { ...bandDraft }, note: noteDraft.trim() };
+    state.history.push(entry);
+    save();
+    launchConfetti();
+    render(); // re-render to disable buttons immediately
+    setTimeout(() => { isCompleting = false; advance(); }, 1300);
   }
 
   function advance() {
@@ -841,16 +775,76 @@
     checkedSet = new Set();
     expandedSet = new Set();
     mvdMode = false;
+    bandDraft = {};
+    noteDraft = "";
     save();
     render();
   }
 
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch (err) {
-      console.error("Failed to save progress:", err);
+  function launchConfetti() {
+    const colors = ["#2F6F6B", "#C99A3E", "#B85C4A", "#1E4C49", "#7FA39E"];
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.inset = "0";
+    container.style.pointerEvents = "none";
+    container.style.zIndex = "300";
+    container.style.overflow = "hidden";
+    document.body.appendChild(container);
+
+    const pieceCount = 90;
+    for (let i = 0; i < pieceCount; i++) {
+      const piece = document.createElement("div");
+      const size = 6 + Math.random() * 6;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const left = Math.random() * 100;
+      const duration = 1.6 + Math.random() * 1.2;
+      const delay = Math.random() * 0.3;
+      const r0 = Math.random() * 360;
+      const r1 = r0 + 540 + Math.random() * 360;
+      const drift = (Math.random() * 2 - 1) * 80;
+
+      piece.style.position = "absolute";
+      piece.style.top = "-5%";
+      piece.style.left = left + "%";
+      piece.style.width = size + "px";
+      piece.style.height = (size * 0.4) + "px";
+      piece.style.background = color;
+      piece.style.opacity = "0.9";
+      piece.style.borderRadius = "1px";
+      piece.style.setProperty("--r0", r0 + "deg");
+      piece.style.setProperty("--r1", r1 + "deg");
+      piece.style.setProperty("--drift", drift + "px");
+      piece.style.animation = `confetti-fall ${duration}s ease-in ${delay}s forwards`;
+      container.appendChild(piece);
     }
+
+    const toast = document.createElement("div");
+    toast.textContent = "Nice work — logged.";
+    toast.style.position = "fixed";
+    toast.style.top = "calc(env(safe-area-inset-top, 0px) + 18%)";
+    toast.style.left = "50%";
+    toast.style.transform = "translate(-50%, 0)";
+    toast.style.background = "#2F6F6B";
+    toast.style.color = "#FBF8EF";
+    toast.style.padding = "10px 18px";
+    toast.style.borderRadius = "999px";
+    toast.style.fontFamily = "Georgia, serif";
+    toast.style.fontSize = "16px";
+    toast.style.boxShadow = "0 4px 14px rgba(0,0,0,0.2)";
+    toast.style.zIndex = "301";
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = "1"; toast.style.transform = "translate(-50%, 6px)"; });
+    setTimeout(() => { toast.style.opacity = "0"; }, 1000);
+    setTimeout(() => { toast.remove(); }, 1400);
+
+    setTimeout(() => { container.remove(); }, 3200);
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (err) { console.error("Failed to save progress:", err); }
   }
 
   function load() {
@@ -858,13 +852,9 @@
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (typeof parsed.index === "number" && Array.isArray(parsed.history)) {
-          state = parsed;
-        }
+        if (typeof parsed.index === "number" && Array.isArray(parsed.history)) state = parsed;
       }
-    } catch (err) {
-      console.log("No existing progress found, starting fresh.");
-    }
+    } catch (err) { console.log("No existing progress found, starting fresh."); }
     loaded = true;
     render();
   }
@@ -872,6 +862,5 @@
   load();
 })();
 </script>
-
 </body>
 </html>
