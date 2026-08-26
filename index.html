@@ -137,6 +137,15 @@
     background: var(--line-soft); border-radius: 6px; padding: 10px 12px; margin-top: 8px;
     font-size: 13px; line-height: 1.5; color: var(--ink);
   }
+  .rep-tracker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .rep-tracker-label { font-size: 11.5px; color: var(--ink-soft); margin-right: 2px; }
+  .rep-box {
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--line);
+    background: white; font-size: 11px; color: var(--ink-soft); cursor: pointer; position: relative;
+  }
+  .rep-box input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .rep-box.checked { background: var(--teal); border-color: var(--teal); color: white; }
   .exercise.checked .exercise-name { text-decoration: line-through; color: var(--ink-soft); }
 
   .band-row { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
@@ -318,8 +327,8 @@
       full: "Start in a prone press-up position (like the top of a push-up), then in one motion jump your feet forward underneath you into a surf stance (feet roughly shoulder-width, knees bent, one foot forward). Reset and repeat. Go slow and controlled at first — speed comes later." },
     balance:    { name: "Single-Leg Balance", cat: "Surf-Specific", cue: "Stand on one leg, eyes open then closed.",
       full: "Stand on one leg with a soft bend in the knee. Once that's steady, close your eyes and hold again. Switch legs." },
-    mobFlow:    { name: "Full Mobility Flow", cat: "Mobility", cue: "One round each: Cat-Cow, 90/90s, Thoracic Rotations, World's Greatest Stretch, Down Dog→Cobra.",
-      full: "One round each of Cat-Cow, 90/90 Hip Switches, Thoracic Rotations, World's Greatest Stretch, and the Downward Dog → Cobra Flow, done back to back as a single sequence." },
+    mobFlow:    { name: "Full Mobility Flow", cat: "Mobility", cue: "Cat-Cow x10, 90/90s x8/side, Thoracic x10/side, WGS x5/side, Down Dog→Cobra x8.",
+      full: "One full round of each movement, done back to back as a single sequence: Cat-Cow x10 reps, 90/90 Hip Switches x8 per side, Thoracic Rotations x10 per side, World's Greatest Stretch x5 per side, and the Downward Dog → Cobra Flow x8 reps." },
     walk:       { name: "Walk", cat: "Conditioning", cue: "Easy pace, can double up with a dog walk.",
       full: "An easy-paced walk. This can double up with a regular dog walk — it doesn't need to be a separate outing." },
     circuit:    { name: "Endurance Circuit", cat: "Conditioning", cue: "Squats x15 → Pulldown x15 → Prone Swim 30s → Plank 30s. Rest 90s between rounds.",
@@ -420,6 +429,7 @@
   let guideQuery = "";
   let bandDraft = {};
   let noteDraft = "";
+  let repChecks = {}; // fullIdx -> Set of checked rep/set numbers (1-indexed)
   let isCompleting = false;
   let showAllHistory = false;
 
@@ -491,6 +501,31 @@
       BANDS.map(b => `<option value="${b.key}" ${selectedVal === b.key ? "selected" : ""}>${b.label}</option>`).join("");
   }
 
+  // Pulls a set count out of a sets string like "3 x 12", "3 rounds x 12", or
+  // "2 rounds". Only exercises with an actual multi-set structure get a
+  // tracker — single-set rep counts like "10 reps" or "8/side" don't need one.
+  function parseTrackableCount(setsStr) {
+    if (!setsStr) return null;
+    let m = setsStr.match(/^(\d+)\s*(?:rounds?)?\s*x\s*/i);
+    if (m) return parseInt(m[1], 10);
+    m = setsStr.match(/^(\d+)\s*rounds?\b/i);
+    if (m) return parseInt(m[1], 10);
+    return null;
+  }
+
+  function renderRepTracker(fullIdx, count) {
+    const checkedReps = repChecks[fullIdx] || new Set();
+    let items = "";
+    for (let n = 1; n <= count; n++) {
+      const isChecked = checkedReps.has(n);
+      items += `<label class="rep-box ${isChecked ? "checked" : ""}">
+        <input type="checkbox" data-repidx="${fullIdx}" data-repnum="${n}" ${isChecked ? "checked" : ""}>
+        <span>${n}</span>
+      </label>`;
+    }
+    return `<div class="rep-tracker"><span class="rep-tracker-label">Track:</span>${items}</div>`;
+  }
+
   function render() {
     if (!loaded) { root.innerHTML = `<div class="loading">Loading your progress…</div>`; return; }
 
@@ -545,6 +580,7 @@
         const expanded = expandedSet.has(fullIdx);
         const setsToShow = mvdMode ? item.mvdSets : item.sets;
         const isBandEx = BAND_EXERCISES.has(item.key);
+        const trackCount = parseTrackableCount(setsToShow);
         html += `
           <div class="exercise ${checked ? "checked" : ""}">
             <input type="checkbox" data-i="${fullIdx}" ${checked ? "checked" : ""}>
@@ -556,7 +592,10 @@
                 <span class="info-dot">i</span>
               </div>
               <div class="exercise-cue">${def.cue}</div>
-              ${expanded ? `<div class="exercise-full-desc">${def.full}</div>` : ""}
+              ${expanded ? `
+                <div class="exercise-full-desc">${def.full}</div>
+                ${trackCount && trackCount > 1 ? renderRepTracker(fullIdx, trackCount) : ""}
+              ` : ""}
               ${isBandEx ? `
                 <div class="band-row">
                   <label class="band-label">Band used:
@@ -722,6 +761,16 @@
       });
     });
 
+    root.querySelectorAll('[data-repidx]').forEach(cb => {
+      cb.addEventListener("change", (e) => {
+        const fullIdx = e.target.getAttribute("data-repidx");
+        const repNum = parseInt(e.target.getAttribute("data-repnum"), 10);
+        if (!repChecks[fullIdx]) repChecks[fullIdx] = new Set();
+        if (e.target.checked) repChecks[fullIdx].add(repNum); else repChecks[fullIdx].delete(repNum);
+        render();
+      });
+    });
+
     const notesArea = document.getElementById("notes-textarea");
     if (notesArea) {
       notesArea.addEventListener("input", (e) => { noteDraft = e.target.value; });
@@ -729,7 +778,7 @@
 
     const mvdCheck = document.getElementById("mvd-check");
     if (mvdCheck) {
-      mvdCheck.addEventListener("change", (e) => { mvdMode = e.target.checked; checkedSet = new Set(); render(); });
+      mvdCheck.addEventListener("change", (e) => { mvdMode = e.target.checked; checkedSet = new Set(); repChecks = {}; render(); });
     }
 
     const btnComplete = document.getElementById("btn-complete");
@@ -985,6 +1034,7 @@
     mvdMode = false;
     bandDraft = {};
     noteDraft = "";
+    repChecks = {};
     save();
     render();
   }
