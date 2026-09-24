@@ -414,6 +414,34 @@
       SESSIONS.push({ week, letter, title: d.title, band: phase.band, list: d.list });
     });
   }
+
+  // Deload week — inserted right after 9A. Same exercises, roughly half the
+  // volume, no speed work. Keeps the daily habit intact while cutting load,
+  // rather than a full rest week that would break the streak.
+  const DELOAD_BAND = "One band size lighter than your current working band";
+  const DELOAD_DAYS = {
+    A: { title: "Deload — Full Body (Light)", list: [
+      ex("squat","2 x 10", true, "1 x 10"), ex("row","2 x 10"), ex("chestPress","2 x 10"),
+      ex("bridge","2 x 12"), ex("plank","2 x 20 sec", true, "1 x 20 sec")
+    ]},
+    B: { title: "Deload — Full Body (Light)", list: [
+      ex("lunge","2 x 8/side", true, "1 x 8/side"), ex("pulldown","2 x 10"), ex("ohPress","2 x 8"),
+      ex("birdDog","2 x 8/side", true, "1 x 8/side"), ex("sidePlank","2 x 20 sec/side")
+    ]},
+    C: { title: "Deload — Mobility & Recovery", list: [
+      ex("mobFlow","1 round each", true), ex("walk","15-20 min", true, "10 min")
+    ]},
+    D: { title: "Deload — Recovery + Light Surf Prep", list: [
+      ex("proneSwim","2 x 20 sec", true, "1 x 20 sec"), ex("deepSquat","2 x 20 sec", true, "1 x 20 sec"),
+      ex("hipFlexor","2 x 30 sec/side"), ex("walk","10-15 min")
+    ]}
+  };
+  const deloadSessions = DAY_ORDER.map(letter => ({
+    week: "9.5", letter, title: DELOAD_DAYS[letter].title, band: DELOAD_BAND, list: DELOAD_DAYS[letter].list
+  }));
+  const insertAt = SESSIONS.findIndex(s => s.week === 9 && s.letter === "A") + 1;
+  SESSIONS.splice(insertAt, 0, ...deloadSessions);
+
   const TOTAL = SESSIONS.length;
 
   const KEY = "surf-tracker-progress";
@@ -552,7 +580,7 @@
     if (done) {
       html += `
         <div class="card done-state">
-          <h2>You made it through all 12 weeks.</h2>
+          <h2>You made it through the full program.</h2>
           <p class="subtitle">Time to check that surf trip on the calendar. If you want to keep going, you can replay the program from any point below.</p>
           <button class="btn-primary" id="btn-restart">Start Over From Week 1</button>
         </div>
