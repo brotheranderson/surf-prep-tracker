@@ -6,7 +6,8 @@ A simple, single-page training tracker for a 12-week home workout program built 
 
 ## What it does
 
-- Walks through a 12-week, 4-day-a-week program (48 sessions total), one session at a time
+- Walks through a 12-week, 4-day-a-week program followed by an 8-week, 3-day-a-week surf-focused Phase 4, one session at a time
+- Band tracking with stacking (combine bands for heavier resistance) and progression suggestions
 - Automatically loads the next session once you mark the current one complete
 - Supports a "Minimum Viable Day" (MVD) mode — a reduced version of each session for low-motivation or low-time days, so a bad day becomes a short session instead of a skipped one
 - Built-in Exercise Guide with plain-language descriptions of every movement in the program
