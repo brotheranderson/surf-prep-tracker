@@ -204,8 +204,22 @@
     width: 100%; font-family: inherit; font-size: 14px; padding: 8px 10px;
     border-radius: 8px; border: 1px solid var(--line); background: white; color: var(--ink);
   }
-  .form-band-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; gap: 10px; }
-  .form-band-item select { font-family: inherit; font-size: 12.5px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: white; }
+  .form-band-item { display: flex; flex-direction: column; align-items: flex-start; font-size: 13px; padding: 7px 0; gap: 5px; }
+  .band-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 1px; }
+  .band-chip {
+    width: 38px; height: 38px; border-radius: 50%; padding: 0; flex-shrink: 0;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; font-weight: 700;
+    background: white; color: var(--ink); border: 2.5px solid var(--chip);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .band-chip.on { background: var(--chip); color: var(--chip-ink); }
+  .band-yellow { --chip: #E0B22E; --chip-ink: #2A2200; }
+  .band-blue   { --chip: #3C78B8; --chip-ink: #FFFFFF; }
+  .band-green  { --chip: #4C9A62; --chip-ink: #FFFFFF; }
+  .band-grey   { --chip: #7D8890; --chip-ink: #FFFFFF; }
+  .band-red    { --chip: #C0473A; --chip-ink: #FFFFFF; }
+  .band-total { font-size: 12px; color: var(--ink-soft); margin-left: 4px; }
+  .week-focus { font-size: 13px; color: var(--ink-soft); line-height: 1.45; margin: 0 0 14px; }
   .history-detail-actions { display: flex; gap: 14px; margin-top: 6px; }
   .history-detail-actions button { padding: 0; font-size: 12px; }
   .export-textarea {
@@ -257,21 +271,53 @@
 (function() {
   // ---------- Band reference ----------
   const BANDS = [
-    { key: "yellow", label: "Yellow · 10 lb" },
-    { key: "blue",   label: "Blue · 20 lb" },
-    { key: "green",  label: "Green · 30 lb" },
-    { key: "grey",   label: "Grey · 40 lb" },
-    { key: "red",    label: "Red · 50 lb" }
+    { key: "yellow", lb: 10, label: "Yellow · 10 lb" },
+    { key: "blue",   lb: 20, label: "Blue · 20 lb" },
+    { key: "green",  lb: 30, label: "Green · 30 lb" },
+    { key: "grey",   lb: 40, label: "Grey · 40 lb" },
+    { key: "red",    lb: 50, label: "Red · 50 lb" }
   ];
   const BAND_ORDER = BANDS.map(b => b.key); // lightest to heaviest, in order
-  function bandLabel(key) {
-    const b = BANDS.find(x => x.key === key);
-    return b ? b.label : key;
+  const BAND_LB = {};
+  BANDS.forEach(b => { BAND_LB[b.key] = b.lb; });
+
+  // A band choice is stored as a string. A single band is just its color ("green"),
+  // exactly as before, so all older history keeps working. A stack joins colors with
+  // "+", heaviest first ("red+grey"). Stacked bands add their resistance together.
+  function parseStack(v) {
+    return v ? v.split("+").filter(k => BAND_LB[k]) : [];
   }
+  function encodeStack(list) {
+    return BAND_ORDER.slice().reverse().filter(k => list.includes(k)).join("+");
+  }
+  function toggleBand(v, band) {
+    const cur = parseStack(v);
+    return encodeStack(cur.includes(band) ? cur.filter(b => b !== band) : cur.concat(band));
+  }
+  function stackLb(list) {
+    return list.reduce((sum, k) => sum + BAND_LB[k], 0);
+  }
+  function bandLabel(v) {
+    const list = parseStack(v);
+    if (list.length === 0) return v || "";
+    if (list.length === 1) return BANDS.find(b => b.key === list[0]).label;
+    const names = encodeStack(list).split("+").map(k => k.charAt(0).toUpperCase() + k.slice(1));
+    return `${names.join(" + ")} · ${stackLb(list)} lb`;
+  }
+
+  // The next step up is always +10 lb: one band at a time, then red plus a lighter
+  // band, and so on up to all five bands together (150 lb).
+  const STACK_LADDER = {
+    10: "yellow", 20: "blue", 30: "green", 40: "grey", 50: "red",
+    60: "red+yellow", 70: "red+blue", 80: "red+green", 90: "red+grey",
+    100: "red+grey+yellow", 110: "red+grey+blue", 120: "red+grey+green",
+    130: "red+grey+green+yellow", 140: "red+grey+green+blue", 150: "red+grey+green+blue+yellow"
+  };
 
   const BAND_EXERCISES = new Set([
     "squat","lunge","row","bentRow","chestPress","ohPress","pulldown","facePull",
-    "bridge","slBridge","pallof","woodChop","dislocates","superset","circuit"
+    "bridge","slBridge","pallof","woodChop","dislocates","superset","circuit",
+    "tempoSquat","rdl","slRdl","paddleIntervals"
   ]);
 
   // ---------- Exercise library: short cue (shown inline) + full description (guide/expand) ----------
@@ -339,7 +385,30 @@
     circuit:    { name: "Endurance Circuit", cat: "Conditioning", cue: "Squats x15 → Pulldown x15 → Prone Swim 30s → Plank 30s. Rest 90s between rounds.",
       full: "A circuit done with minimal rest between exercises: Band Squats x15, Straight-Arm Pulldown x15, Prone Swim 30 sec, Plank 30 sec. Rest about 90 seconds between full rounds." },
     superset:   { name: "Pulldown + Face Pull Superset", cat: "Conditioning", cue: "12 reps each, back to back, minimal rest.",
-      full: "Straight-Arm Pulldown and Face Pulls done back to back with minimal rest in between, for the given number of rounds, 12 reps each exercise per round." }
+      full: "Straight-Arm Pulldown and Face Pulls done back to back with minimal rest in between, for the given number of rounds, 12 reps each exercise per round." },
+
+    // ----- New in Phase 4 (`start` = suggested first band when there's no history yet) -----
+    tempoSquat: { name: "Tempo Band Squat", cat: "Strength", start: "green",
+      cue: "Band squat: 3 seconds down, 1 second pause at the bottom, then stand.",
+      full: "Set up like a regular Band Squat — standing on the band, handles at your shoulders. Lower for a slow count of three, pause for one second at the bottom with your weight in your heels, then stand back up with control. The slow lowering makes the same band feel much heavier, so start lighter than your regular squat band. Add a band to the stack when the last set feels easy." },
+    rdl:        { name: "Band Romanian Deadlift", cat: "Strength", start: "green",
+      cue: "Stand on band, handles at thighs, hips back with a flat back, then stand tall.",
+      full: "Stand on the band with feet hip-width apart and a handle in each hand hanging at your thighs. With a soft bend in your knees and a flat back, push your hips straight back and let the handles slide down toward your shins until you feel a stretch in your hamstrings. Drive your hips forward to stand tall and squeeze your glutes at the top. This hip hinge builds the back-of-the-body strength that keeps you low and stable on a board." },
+    slRdl:      { name: "Single-Leg RDL", cat: "Strength", start: "yellow",
+      cue: "Band under one foot, hinge forward while the other leg reaches back.",
+      full: "Stand on one foot on the band with a handle in each hand. Hinge forward at the hip while your other leg reaches straight back, keeping your hips square to the floor, then return to standing. If you wobble, touch your free toe lightly to the floor — balance improves fast. Finish all reps on one side before switching." },
+    pushUp:     { name: "Push-Up", cat: "Strength",
+      cue: "Hands under shoulders, lower your chest, press up. Hands on a counter makes it easier.",
+      full: "Hands under your shoulders, body in a straight line from head to heels. Lower your chest toward the floor, then press back up. If the floor version is too hard, put your hands on a sturdy counter or the edge of a couch (an incline) and work the incline lower over the weeks. This is the strength behind a surf pop-up." },
+    deadBug:    { name: "Dead Bug", cat: "Strength",
+      cue: "On your back, lower opposite arm and leg slowly without arching your back.",
+      full: "Lie on your back with arms pointing at the ceiling and knees bent at 90 degrees over your hips. Keep your lower back gently pressed into the floor as you slowly lower one arm overhead and the opposite leg toward the floor, then return and switch sides. Move slowly. It builds the same deep core control as a plank, without the holding." },
+    stanceHold: { name: "Surf Stance Hold", cat: "Surf-Specific",
+      cue: "Low surf stance, knees bent, arms out. Hold, then switch your front foot.",
+      full: "Stand in a surf stance: feet a little wider than shoulder-width, back foot angled across, knees bent, hips low, weight centered, arms out for balance, eyes forward. Hold for the time given, then switch which foot is in front for the next set so both stances get trained. For an extra balance challenge, stand on a folded towel." },
+    paddleIntervals: { name: "Paddle Intervals", cat: "Conditioning", start: "blue",
+      cue: "Anchor high, alternate fast pulls like a paddling stroke. 30 sec on, 30 sec rest.",
+      full: "Anchor the band high on the door and kneel or stand in an athletic stance with a handle in each hand. Alternate pulling each hand down toward your hip in a fast, steady paddling rhythm for 30 seconds, then rest 30 seconds. That's one round. It builds the paddling endurance you'll need out past the break. Pick a band light enough to keep your speed up." }
   };
 
   const ex = (key, sets, mvd, mvdSets) => ({ key, sets, mvd: !!mvd, mvdSets: mvdSets || sets });
@@ -392,11 +461,11 @@
       days: {
         A: { title: "Strength", list: [
           ex("squat","4 x 15", true, "2 x 15"), ex("bentRow","4 x 15"), ex("chestPress","4 x 15"),
-          ex("slBridge","3 x 12/side"), ex("plank","3 x 60 sec", true, "2 x 60 sec")
+          ex("slBridge","3 x 12/side"), ex("deadBug","3 x 8/side", true, "2 x 8/side")
         ]},
         B: { title: "Strength", list: [
           ex("lunge","4 x 12/side", true, "2 x 12/side"), ex("pulldown","4 x 20"), ex("ohPress","4 x 12"),
-          ex("pallof","3 x 12/side"), ex("sidePlank","3 x 40 sec/side", true, "2 x 40 sec/side")
+          ex("pallof","3 x 12/side"), ex("birdDog","3 x 10/side", true, "2 x 10/side")
         ]},
         C: { title: "Endurance Circuit", list: [
           ex("circuit","3 rounds", true, "2 rounds"), ex("walk","20-25 min", true, "10 min")
@@ -446,6 +515,68 @@
   }));
   const insertAt = SESSIONS.findIndex(s => s.week === 9 && s.letter === "A") + 1;
   SESSIONS.splice(insertAt, 0, ...deloadSessions);
+  SESSIONS.forEach(s => { s.program = 1; });
+
+  // ---------- Phase 4: Surf Season (weeks 13-20, 3 days a week) ----------
+  // Appended AFTER the original 52 sessions, so every logged session keeps its position.
+  // Surf skills are spread across all three days (pop-ups on A, paddling on B,
+  // stance + balance on C) instead of living on one day that can get crowded out.
+  // Each day's MVD (minimum-viable-day) version keeps its surf-skill pieces.
+  // Week order: 13-15 build, 16 lighter reset, 17-19 build harder, 20 surf rehearsal.
+  const P2_BAND = "Start from your last logged band; stack up when the last set feels easy";
+  const P2_FOCUS = [
+    "Learn the new patterns. Slow, clean pop-ups and 3-second squat lowers. Leave 2-3 reps in the tank.",
+    "Add reps. Keep the tempo honest and the pop-ups smooth.",
+    "Top of the first block. Stack a band on anything where the last set felt easy.",
+    "Lighter reset week with one fewer set. Still do every session; keep the surf skills.",
+    "New block: more sets and more pop-ups. Start from your last bands and stack up where it's easy.",
+    "Pop-ups with a 3-second stance hold at the top. Imagine the board under you.",
+    "Peak week: your fastest pop-ups and strongest bands.",
+    "Surf rehearsal: smooth, fast pop-ups and a steady stance. Finish strong."
+  ];
+  // One entry per week (13..20). Sets are cut for the reset week (16).
+  const P2 = {
+    popUp:          ["3 x 6","3 x 8","4 x 8","2 x 6","4 x 8","4 x 10","5 x 8","4 x 10"],
+    tempoSquat:     ["3 x 8","3 x 10","3 x 12","2 x 10","4 x 8","4 x 10","4 x 12","3 x 12"],
+    rdl:            ["3 x 10","3 x 10","3 x 12","2 x 10","3 x 10","3 x 12","4 x 10","3 x 12"],
+    bentRow:        ["3 x 12","3 x 12","3 x 15","2 x 12","4 x 12","4 x 12","4 x 15","3 x 15"],
+    slBridge:       ["3 x 10/side","3 x 12/side","3 x 12/side","2 x 10/side","3 x 12/side","3 x 15/side","4 x 12/side","3 x 15/side"],
+    deadBug:        ["3 x 8/side","3 x 8/side","3 x 10/side","2 x 8/side","3 x 10/side","3 x 10/side","3 x 12/side","3 x 10/side"],
+    hipFlexor:      ["2 x 30 sec/side","2 x 30 sec/side","2 x 30 sec/side","2 x 30 sec/side","2 x 30 sec/side","2 x 30 sec/side","2 x 30 sec/side","2 x 30 sec/side"],
+    pulldown:       ["3 x 15","3 x 15","3 x 20","2 x 15","4 x 15","4 x 15","4 x 20","3 x 20"],
+    proneSwim:      ["3 x 20 sec","3 x 25 sec","3 x 30 sec","2 x 20 sec","3 x 30 sec","3 x 35 sec","3 x 40 sec","3 x 30 sec"],
+    pushUp:         ["3 x 6","3 x 8","3 x 8","2 x 6","3 x 8","3 x 10","3 x 10","3 x 10"],
+    ohPress:        ["3 x 10","3 x 10","3 x 12","2 x 10","3 x 10","3 x 12","4 x 10","3 x 12"],
+    facePull:       ["3 x 12","3 x 12","3 x 15","2 x 12","3 x 15","3 x 15","3 x 15","3 x 15"],
+    pallof:         ["3 x 10/side","3 x 10/side","3 x 12/side","2 x 10/side","3 x 12/side","3 x 12/side","3 x 12/side","3 x 12/side"],
+    thoracic:       ["10/side","10/side","10/side","10/side","10/side","10/side","10/side","10/side"],
+    stanceHold:     ["3 x 20 sec","3 x 25 sec","3 x 30 sec","2 x 20 sec","3 x 30 sec","3 x 35 sec","3 x 40 sec","3 x 30 sec"],
+    lunge:          ["3 x 10/side","3 x 10/side","3 x 12/side","2 x 10/side","3 x 12/side","4 x 10/side","4 x 12/side","3 x 12/side"],
+    slRdl:          ["3 x 6/side","3 x 8/side","3 x 8/side","2 x 6/side","3 x 8/side","3 x 10/side","3 x 10/side","3 x 8/side"],
+    woodChop:       ["3 x 10/side","3 x 10/side","3 x 12/side","2 x 10/side","3 x 12/side","3 x 12/side","3 x 12/side","3 x 12/side"],
+    balance:        ["2 x 30 sec/side","2 x 30 sec/side","3 x 30 sec/side","2 x 30 sec/side","3 x 30 sec/side","3 x 40 sec/side","3 x 40 sec/side","3 x 30 sec/side"],
+    paddleIntervals:["4 rounds x 30 sec on","5 rounds x 30 sec on","6 rounds x 30 sec on","3 rounds x 30 sec on","6 rounds x 30 sec on","7 rounds x 30 sec on","8 rounds x 30 sec on","6 rounds x 30 sec on"],
+    mobFlow:        ["1 round each","1 round each","1 round each","1 round each","1 round each","1 round each","1 round each","1 round each"]
+  };
+  // [exercise, part of the minimum-viable-day?]
+  const P2_DAYS = {
+    A: { title: "Pop-Ups + Legs + Pull", keys: [["popUp",1],["tempoSquat",1],["rdl",0],["bentRow",0],["slBridge",0],["deadBug",1],["hipFlexor",0]] },
+    B: { title: "Paddle + Push + Rotation", keys: [["pulldown",1],["proneSwim",1],["pushUp",1],["ohPress",0],["facePull",0],["pallof",0],["thoracic",0]] },
+    C: { title: "Stance + Single-Leg + Flow", keys: [["stanceHold",1],["lunge",1],["slRdl",0],["woodChop",0],["balance",1],["paddleIntervals",0],["mobFlow",0]] }
+  };
+  // The MVD version of a session keeps the exercise but trims anything over 2 sets down to 2.
+  function mvdFrom(str) {
+    return str.replace(/^(\d+)(\s*(?:rounds?)?\s*x)/i, (m, n, rest) => (parseInt(n, 10) > 2 ? "2" : n) + rest);
+  }
+  [13,14,15,16,17,18,19,20].forEach((week, w) => {
+    ["A","B","C"].forEach(letter => {
+      const d = P2_DAYS[letter];
+      SESSIONS.push({
+        week, letter, title: d.title, band: P2_BAND, focus: P2_FOCUS[w], program: 2,
+        list: d.keys.map(([key, isMvd]) => ex(key, P2[key][w], !!isMvd, isMvd ? mvdFrom(P2[key][w]) : P2[key][w]))
+      });
+    });
+  });
 
   const TOTAL = SESSIONS.length;
 
@@ -509,23 +640,27 @@
     return { color: entry.bandChoices[key], entry };
   }
 
-  // Simple progressive-overload heuristic: if the last 3 logged sessions for
-  // this exercise all used the same band, suggest moving up one band next time.
+  // Simple progressive-overload heuristic: if the last 3 logged sessions for this
+  // exercise all used the same total resistance, suggest the next +10 lb step up.
   function bandProgressionSuggestion(key) {
     const list = historyEntriesForExercise(key);
     if (list.length < 3) return null;
     const lastThree = list.slice(-3).map(e => e.bandChoices[key]);
-    const allSame = lastThree.every(c => c === lastThree[0]);
-    if (!allSame) return null;
-    const currentBand = lastThree[0];
-    const idx = BAND_ORDER.indexOf(currentBand);
-    if (idx === -1 || idx >= BAND_ORDER.length - 1) return null; // already at the top, or unrecognized
-    return { currentBand, nextBand: BAND_ORDER[idx + 1] };
+    const totals = lastThree.map(v => stackLb(parseStack(v)));
+    if (totals[0] === 0 || !totals.every(t => t === totals[0])) return null;
+    const nextBand = STACK_LADDER[totals[0] + 10];
+    if (!nextBand) return null; // already at the top of the ladder
+    return { currentBand: lastThree[2], nextBand };
   }
 
   function lastBandHtml(key) {
     const last = lastBandUsed(key);
-    if (!last) return `<span class="band-last">No previous log for this exercise yet</span>`;
+    if (!last) {
+      const start = EX[key] && EX[key].start;
+      return start
+        ? `<span class="band-last">No previous log yet — suggested start: <strong>${bandLabel(start)}</strong></span>`
+        : `<span class="band-last">No previous log for this exercise yet</span>`;
+    }
     const s = SESSIONS[last.entry.sessionIndex];
     const dateStr = new Date(last.entry.date).toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const suggestion = bandProgressionSuggestion(key);
@@ -535,9 +670,17 @@
     return `<span class="band-last">Last used: <strong>${bandLabel(last.color)}</strong> · Wk ${s.week}·${s.letter} (${dateStr})${suggestHtml}</span>`;
   }
 
-  function bandOptionsHtml(selectedVal) {
-    return `<option value="">— not logged —</option>` +
-      BANDS.map(b => `<option value="${b.key}" ${selectedVal === b.key ? "selected" : ""}>${b.label}</option>`).join("");
+  // Five tappable band chips. Tap any combination to stack them; the total shows beside them.
+  function bandChipsHtml(ctx, key, value) {
+    const sel = parseStack(value);
+    const chips = BANDS.map(b => `
+      <button type="button" class="band-chip band-${b.key} ${sel.includes(b.key) ? "on" : ""}"
+        data-chip-ctx="${ctx}" data-chip-key="${key}" data-chip-band="${b.key}"
+        aria-pressed="${sel.includes(b.key)}" aria-label="${b.label}">${b.lb}</button>`).join("");
+    const totalText = sel.length
+      ? (sel.length > 1 ? `${stackLb(sel)} lb stacked` : `${stackLb(sel)} lb`)
+      : "not logged";
+    return `<div class="band-chips">${chips}<span class="band-total">${totalText}</span></div>`;
   }
 
   // Pulls a set count out of a sets string like "3 x 12", "3 rounds x 12", or
@@ -694,20 +837,26 @@
 
     const idx = state.index;
     const done = idx >= TOTAL;
-    const progressFrac = Math.min(idx, TOTAL) / TOTAL;
     const completedCount = state.history.length;
+
+    // The progress bar follows the CURRENT program, so starting Phase 4 never makes it slide backward.
+    const curProgram = done ? SESSIONS[TOTAL - 1].program : SESSIONS[idx].program;
+    const progFirst = SESSIONS.findIndex(x => x.program === curProgram);
+    const progLast = SESSIONS.map(x => x.program).lastIndexOf(curProgram);
+    const progLen = progLast - progFirst + 1;
+    const progressFrac = (Math.min(idx, progLast + 1) - progFirst) / progLen;
 
     let html = `
       <div class="top-row">
         <div>
-          <p class="eyebrow">Surf-Ready Tracker</p>
+          <p class="eyebrow">Surf-Ready Tracker${curProgram === 2 ? " · Phase 4" : ""}</p>
           <h1>${done ? "Program Complete" : "Week " + SESSIONS[idx].week + " · Day " + SESSIONS[idx].letter}</h1>
         </div>
         <button class="guide-btn" id="btn-open-guide">Exercise Guide</button>
       </div>
-      <p class="subtitle">${completedCount} of ${TOTAL} sessions logged</p>
+      <p class="subtitle">${completedCount} sessions logged in all</p>
       <div class="tide-wrap">
-        <div class="tide-label"><span>SESSION 1</span><span>SESSION ${TOTAL}</span></div>
+        <div class="tide-label"><span>SESSION 1</span><span>SESSION ${progLen}</span></div>
         ${svgTide(progressFrac)}
       </div>
     `;
@@ -726,10 +875,11 @@
       html += `
         <div class="card">
           <div class="session-head">
-            <span class="session-tag">SESSION ${idx + 1} / ${TOTAL}</span>
+            <span class="session-tag">SESSION ${idx - progFirst + 1} / ${progLen}</span>
             <span class="session-band">Bands: ${s.band}</span>
           </div>
           <h2>${s.title}${mvdMode ? " — MVD" : ""}</h2>
+          ${s.focus ? `<p class="week-focus">${s.focus}</p>` : ""}
           ${mvdMode ? '<p class="mvd-banner">Showing minimum-viable-day version only</p>' : ""}
           <div id="exercise-list">
       `;
@@ -761,9 +911,8 @@
               ` : ""}
               ${isBandEx ? `
                 <div class="band-row">
-                  <label class="band-label">Band used:
-                    <select class="band-select" data-bandkey="${item.key}">${bandOptionsHtml(bandDraft[item.key] || "")}</select>
-                  </label>
+                  <div class="band-label">Band used — tap to stack:</div>
+                  ${bandChipsHtml("session", item.key, bandDraft[item.key] || "")}
                   ${lastBandHtml(item.key)}
                 </div>
               ` : ""}
@@ -919,10 +1068,18 @@
       });
     });
 
-    root.querySelectorAll('.band-select').forEach(sel => {
-      sel.addEventListener("change", (e) => {
-        const key = e.target.getAttribute("data-bandkey");
-        bandDraft[key] = e.target.value;
+    root.querySelectorAll('.band-chip').forEach(btn => {
+      btn.addEventListener("click", () => {
+        const ctx = btn.getAttribute("data-chip-ctx");
+        const key = btn.getAttribute("data-chip-key");
+        const band = btn.getAttribute("data-chip-band");
+        if (ctx === "form") {
+          syncFormDraftFromDom(); // keep any typed date/notes before the re-render
+          formDraft.bandChoices[key] = toggleBand(formDraft.bandChoices[key], band);
+        } else {
+          bandDraft[key] = toggleBand(bandDraft[key], band);
+        }
+        render();
       });
     });
 
@@ -1103,9 +1260,6 @@
     if (dateEl) formDraft.date = dateEl.value;
     if (modeEl) formDraft.mode = modeEl.value;
     if (noteEl) formDraft.note = noteEl.value;
-    document.querySelectorAll('.history-form [data-formband]').forEach(sel => {
-      formDraft.bandChoices[sel.getAttribute("data-formband")] = sel.value;
-    });
   }
 
   function saveHistoryForm() {
@@ -1176,7 +1330,7 @@
             ${bandItems.map(item => `
               <div class="form-band-item">
                 <span>${EX[item.key].name}</span>
-                <select data-formband="${item.key}">${bandOptionsHtml(formDraft.bandChoices[item.key] || "")}</select>
+                ${bandChipsHtml("form", item.key, formDraft.bandChoices[item.key] || "")}
               </div>
             `).join("")}
           </div>
@@ -1208,7 +1362,10 @@
     const entry = { id: genId(), sessionIndex: idx, date: new Date().toISOString(), mode, bandChoices: { ...bandDraft }, note: noteDraft.trim() };
     state.history.push(entry);
     save();
-    launchConfetti();
+    const curS = SESSIONS[idx];
+    const nextS = SESSIONS[idx + 1];
+    const finishesProgram = !nextS || nextS.program !== curS.program;
+    launchConfetti(finishesProgram ? `Program ${curS.program} complete — what a run.` : "Nice work — logged.", finishesProgram);
     render(); // re-render to disable buttons immediately
     setTimeout(() => { isCompleting = false; advance(); }, 1300);
   }
@@ -1225,7 +1382,7 @@
     render();
   }
 
-  function launchConfetti() {
+  function launchConfetti(message, big) {
     const colors = ["#1F5C82", "#D3A24C", "#BC4B36", "#173D57", "#F3EEDE", "#6FA0B8"];
     const container = document.createElement("div");
     container.style.position = "fixed";
@@ -1240,7 +1397,7 @@
     const originX = window.innerWidth * (0.18 + Math.random() * 0.64);
     const originY = window.innerHeight * (0.18 + Math.random() * 0.28);
 
-    const pieceCount = 90;
+    const pieceCount = big ? 200 : 90;
     const pieces = [];
     for (let i = 0; i < pieceCount; i++) {
       const el = document.createElement("div");
@@ -1295,7 +1452,7 @@
     requestAnimationFrame(frame);
 
     const toast = document.createElement("div");
-    toast.textContent = "Nice work — logged.";
+    toast.textContent = message || "Nice work — logged.";
     toast.style.position = "fixed";
     toast.style.top = "calc(env(safe-area-inset-top, 0px) + 18%)";
     toast.style.left = "50%";
@@ -1312,8 +1469,8 @@
     toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
     document.body.appendChild(toast);
     requestAnimationFrame(() => { toast.style.opacity = "1"; toast.style.transform = "translate(-50%, 6px)"; });
-    setTimeout(() => { toast.style.opacity = "0"; }, 1000);
-    setTimeout(() => { toast.remove(); }, 1400);
+    setTimeout(() => { toast.style.opacity = "0"; }, big ? 2600 : 1000);
+    setTimeout(() => { toast.remove(); }, big ? 3000 : 1400);
   }
 
   function save() {
