@@ -208,6 +208,11 @@
   .form-band-item select { font-family: inherit; font-size: 12.5px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: white; }
   .history-detail-actions { display: flex; gap: 14px; margin-top: 6px; }
   .history-detail-actions button { padding: 0; font-size: 12px; }
+  .export-textarea {
+    width: 100%; min-height: 160px; margin-top: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px; line-height: 1.45; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
+    background: white; color: var(--ink); resize: vertical;
+  }
 
   .done-state { text-align: center; padding: 30px 10px; }
   .done-state h2 { margin-bottom: 8px; }
@@ -462,6 +467,12 @@
   let showAllHistory = false;
 
   // History add/edit form state
+  // Export & backup panel state
+  let exportOpen = false;
+  let exportText = "";
+  let exportStatus = "";
+  let importDraft = "";
+
   let historyFormOpen = false;
   let formEditingId = null;
   let formDraft = { sessionIndex: 0, date: "", mode: "full", note: "", bandChoices: {} };
@@ -539,6 +550,130 @@
     m = setsStr.match(/^(\d+)\s*rounds?\b/i);
     if (m) return parseInt(m[1], 10);
     return null;
+  }
+
+  // ---------- Export & backup ----------
+  function localDateStr(iso) {
+    return new Date(iso).toLocaleDateString("en-CA"); // YYYY-MM-DD in the phone's local time
+  }
+
+  function buildExportText() {
+    const sorted = state.history.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+    const next = state.index < TOTAL
+      ? `Week ${SESSIONS[state.index].week} Day ${SESSIONS[state.index].letter}`
+      : "program complete";
+    const lines = [];
+    lines.push("SURF-READY TRACKER EXPORT");
+    lines.push("Exported: " + localDateStr(new Date().toISOString()));
+    lines.push(`Sessions logged: ${sorted.length} (program has ${TOTAL} sessions) | Next up: ${next}`);
+    lines.push("");
+    lines.push("== SESSION LOG ==");
+    sorted.forEach(h => {
+      const s = SESSIONS[h.sessionIndex];
+      const label = s ? `Wk ${s.week} Day ${s.letter} | ${s.title}` : `Unknown session #${h.sessionIndex}`;
+      lines.push(`${localDateStr(h.date)} | ${label} | ${(h.mode || "full").toUpperCase()}`);
+      const bands = Object.entries(h.bandChoices || {})
+        .map(([k, v]) => `${EX[k] ? EX[k].name : k}: ${bandLabel(v)}`);
+      if (bands.length) lines.push("  Bands: " + bands.join("; "));
+      if (h.note) lines.push("  Note: " + h.note);
+    });
+    lines.push("");
+    lines.push("== RAW DATA (used for restoring; leave as-is) ==");
+    lines.push("BEGIN_JSON");
+    lines.push(JSON.stringify(state));
+    lines.push("END_JSON");
+    return lines.join("\n");
+  }
+
+  async function copyExportText() {
+    try {
+      await navigator.clipboard.writeText(exportText);
+      exportStatus = "Copied to clipboard. Paste it into a note or straight into a chat.";
+    } catch (err) {
+      // Fallback: select the visible textarea so the person can copy manually
+      const ta = document.getElementById("export-textarea");
+      if (ta) { ta.focus(); ta.select(); }
+      exportStatus = "Couldn't copy automatically — the text is selected, so tap Copy in the popup menu.";
+    }
+    render();
+  }
+
+  async function shareExportText() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Surf-Ready Tracker export", text: exportText });
+        exportStatus = "";
+        render();
+        return;
+      } catch (err) {
+        if (err && err.name === "AbortError") return; // person closed the share sheet
+      }
+    }
+    await copyExportText();
+  }
+
+  function restoreFromText() {
+    const raw = importDraft.trim();
+    if (!raw) { alert("Paste your exported text into the box first."); return; }
+    let jsonStr = raw;
+    const m = raw.match(/BEGIN_JSON\s*([\s\S]*?)\s*END_JSON/);
+    if (m) jsonStr = m[1];
+    let parsed;
+    try { parsed = JSON.parse(jsonStr); }
+    catch (err) { alert("That doesn't look like a valid export — couldn't read the data."); return; }
+    if (!parsed || typeof parsed.index !== "number" || !Array.isArray(parsed.history)) {
+      alert("That doesn't look like a valid export — the structure is wrong.");
+      return;
+    }
+    if (!confirm(`This replaces everything currently in the app with the backup (${parsed.history.length} logged sessions). Continue?`)) return;
+    parsed.history.forEach(h => {
+      if (!h.id) h.id = genId();
+      if (!h.bandChoices) h.bandChoices = {};
+      if (typeof h.note !== "string") h.note = "";
+    });
+    state = parsed;
+    checkedSet = new Set();
+    expandedSet = new Set();
+    repChecks = {};
+    importDraft = "";
+    exportStatus = "Backup restored.";
+    save();
+    render();
+  }
+
+  function renderExportCard() {
+    if (!exportOpen) {
+      return `
+        <div class="card">
+          <div class="footer-row">
+            <strong style="font-size:14px;">Export &amp; Backup</strong>
+            <button class="btn-text" id="btn-export-open">Open</button>
+          </div>
+          <p class="subtitle" style="margin:6px 0 0;">Get all your workout data out of the app, or restore it from a backup.</p>
+        </div>`;
+    }
+    exportText = buildExportText(); // always reflects the latest logged data
+    return `
+      <div class="card">
+        <div class="footer-row">
+          <strong style="font-size:14px;">Export &amp; Backup</strong>
+          <button class="btn-text" id="btn-export-close">Close</button>
+        </div>
+        <p class="subtitle" style="margin:6px 0 12px;">Every session, date, band color, and note — as readable text, with a raw data block at the bottom that can restore the app later.</p>
+        <div class="actions" style="margin-top:0;">
+          <button class="btn-primary" id="btn-export-share">Share / Save</button>
+          <button class="btn-ghost" id="btn-export-copy">Copy to clipboard</button>
+        </div>
+        ${exportStatus ? `<p class="band-last" style="margin-top:10px;">${exportStatus}</p>` : ""}
+        <textarea class="export-textarea" id="export-textarea" readonly>${exportText.replace(/</g, "&lt;")}</textarea>
+        <div class="notes-block">
+          <label for="import-textarea">Restore from a backup — paste exported text here:</label>
+          <textarea class="notes-textarea" id="import-textarea" placeholder="Paste the full export text (or just the data block)">${importDraft.replace(/</g, "&lt;")}</textarea>
+          <div class="actions">
+            <button class="btn-ghost" id="btn-import-restore">Restore from pasted text</button>
+          </div>
+        </div>
+      </div>`;
   }
 
   function renderRepTracker(fullIdx, count) {
@@ -677,6 +812,8 @@
         ${state.history.length > 10 ? `<button class="btn-text" id="btn-toggle-history" style="margin-top:8px;">${showAllHistory ? "Show recent only" : "Show full history (" + state.history.length + ")"}</button>` : ""}
       </div>
     `;
+
+    html += renderExportCard();
 
     if (guideOpen) html += renderGuideModal();
 
@@ -884,6 +1021,27 @@
     root.querySelectorAll('[data-delete-id]').forEach(btn => {
       btn.addEventListener("click", () => deleteHistoryEntryById(btn.getAttribute("data-delete-id")));
     });
+
+    const btnExportOpen = document.getElementById("btn-export-open");
+    if (btnExportOpen) btnExportOpen.addEventListener("click", () => { exportOpen = true; exportStatus = ""; exportText = buildExportText(); render(); });
+
+    const btnExportClose = document.getElementById("btn-export-close");
+    if (btnExportClose) btnExportClose.addEventListener("click", () => { exportOpen = false; exportStatus = ""; render(); });
+
+    const btnExportShare = document.getElementById("btn-export-share");
+    if (btnExportShare) btnExportShare.addEventListener("click", () => shareExportText());
+
+    const btnExportCopy = document.getElementById("btn-export-copy");
+    if (btnExportCopy) btnExportCopy.addEventListener("click", () => copyExportText());
+
+    const exportTa = document.getElementById("export-textarea");
+    if (exportTa) exportTa.addEventListener("focus", (e) => e.target.select());
+
+    const importTa = document.getElementById("import-textarea");
+    if (importTa) importTa.addEventListener("input", (e) => { importDraft = e.target.value; });
+
+    const btnImportRestore = document.getElementById("btn-import-restore");
+    if (btnImportRestore) btnImportRestore.addEventListener("click", () => restoreFromText());
 
     const btnAddHistory = document.getElementById("btn-add-history");
     if (btnAddHistory) btnAddHistory.addEventListener("click", () => openAddHistoryForm());
